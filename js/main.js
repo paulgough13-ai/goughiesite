@@ -106,8 +106,8 @@ function initGallery() {
 
   grid.innerHTML = g.photos.map((p, i) => `
     <figure data-i="${i}">
-      <img src="${esc(p.thumb || p.src)}" alt="${esc(p.caption)}" loading="lazy">
-      <figcaption>${esc(p.caption)}</figcaption>
+      <img src="${esc(p.thumb || p.src)}" alt="${esc(p.caption || `${g.title} photograph`)}" loading="lazy">
+      ${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ""}
     </figure>`).join("");
   grid.querySelectorAll("img").forEach((img) => {
     if (img.complete) img.classList.add("loaded");
@@ -172,7 +172,7 @@ function render(i) {
   lbIndex = i;
   const p = lbPhotos[i];
   $("img", lb).src = p.src;
-  $("img", lb).alt = p.caption;
+  $("img", lb).alt = p.caption || "Underwater photograph";
   $(".lb-caption", lb).textContent = p.caption;
   $(".lb-count", lb).textContent = `${i + 1} / ${lbPhotos.length}`;
 }
