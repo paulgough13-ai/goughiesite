@@ -175,6 +175,10 @@ function render(i) {
   $("img", lb).alt = p.caption || "Underwater photograph";
   $(".lb-caption", lb).textContent = p.caption;
   $(".lb-count", lb).textContent = `${i + 1} / ${lbPhotos.length}`;
+  // Count full-size photo views in GoatCounter (shows as "photo/<file>" events)
+  if (window.goatcounter && window.goatcounter.count) {
+    window.goatcounter.count({ path: "photo/" + p.src.split("/").pop(), title: p.caption || document.title, event: true });
+  }
 }
 
 // ── Contact form (sent via Web3Forms; your email is never shown) ──
