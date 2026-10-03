@@ -1,0 +1,4 @@
+# Full-size originals stay on this PC — only the web-sized copies are published
+images/*
+!images/web/
+!images/thumbs/
