@@ -22,6 +22,7 @@ const SITE = {
   // Contact form key from https://web3forms.com — messages go to the email
   // you registered there. The key is safe to publish; it doesn't reveal your email.
   formKey: "",
+  instagram: "https://www.instagram.com/paulgoughie/",
   portrait: "images/web/about-divers.jpg",
 };
 

@@ -36,7 +36,10 @@ function renderChrome() {
   footer.className = "site-footer";
   footer.innerHTML = `
     <span>© ${new Date().getFullYear()} ${esc(SITE.name)}. All images copyright — please ask before use.</span>
-    <a href="contact.html">Get in touch</a>`;
+    <span class="footer-links">
+      <a href="${esc(SITE.instagram)}" target="_blank" rel="noopener">Instagram</a>
+      <a href="contact.html">Get in touch</a>
+    </span>`;
   document.body.append(footer);
 }
 
@@ -178,6 +181,8 @@ function render(i) {
 function initContact() {
   const form = $(".form");
   if (!form) return;
+  const ig = $("[data-instagram]");
+  if (ig) ig.href = SITE.instagram;
   const status = $(".form-status");
   const button = $("button[type=submit]", form);
   const say = (msg, kind) => { status.textContent = msg; status.className = `form-status ${kind || ""}`; };

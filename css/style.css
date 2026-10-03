@@ -216,6 +216,7 @@ a { color: inherit; text-decoration: none; }
   font-size: .75rem; color: var(--muted); letter-spacing: .08em;
 }
 .site-footer a:hover { color: var(--accent); }
+.footer-links { display: flex; gap: 22px; }
 
 /* Fade-in on scroll */
 .reveal { opacity: 0; transform: translateY(24px); transition: opacity .9s ease, transform .9s ease; }
