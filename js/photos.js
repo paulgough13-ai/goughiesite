@@ -19,9 +19,9 @@ const photo = (file, caption) => ({
 const SITE = {
   name: "Paul Gough",
   tagline: "Underwater Photography",
-  email: "you@example.com",
-  instagram: "https://instagram.com/",
-  location: "Based in the UK · Diving worldwide",
+  // Contact form key from https://web3forms.com — messages go to the email
+  // you registered there. The key is safe to publish; it doesn't reveal your email.
+  formKey: "",
   portrait: "images/web/about-divers.jpg",
 };
 

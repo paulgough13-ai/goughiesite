@@ -196,6 +196,12 @@ a { color: inherit; text-decoration: none; }
 .btn:hover { background: var(--accent); }
 .btn-ghost { display: inline-block; color: var(--text); background: transparent; border: 1px solid rgba(255,255,255,.4); }
 .btn-ghost:hover { background: var(--text); color: var(--bg); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn:disabled:hover { background: var(--text); }
+.hp { position: absolute; left: -9999px; }
+.form-status { font-size: .9rem; color: var(--muted); min-height: 1.4em; }
+.form-status.ok { color: var(--accent); }
+.form-status.error { color: #f0a08c; }
 @media (max-width: 860px) { .contact { grid-template-columns: 1fr; } }
 
 /* ── Intro band (home) ──────────────────────────────── */
@@ -210,7 +216,6 @@ a { color: inherit; text-decoration: none; }
   font-size: .75rem; color: var(--muted); letter-spacing: .08em;
 }
 .site-footer a:hover { color: var(--accent); }
-.socials { display: flex; gap: 22px; }
 
 /* Fade-in on scroll */
 .reveal { opacity: 0; transform: translateY(24px); transition: opacity .9s ease, transform .9s ease; }

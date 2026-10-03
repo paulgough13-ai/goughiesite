@@ -36,10 +36,7 @@ function renderChrome() {
   footer.className = "site-footer";
   footer.innerHTML = `
     <span>© ${new Date().getFullYear()} ${esc(SITE.name)}. All images copyright — please ask before use.</span>
-    <span class="socials">
-      <a href="${esc(SITE.instagram)}" target="_blank" rel="noopener">Instagram</a>
-      <a href="mailto:${esc(SITE.email)}">Email</a>
-    </span>`;
+    <a href="contact.html">Get in touch</a>`;
   document.body.append(footer);
 }
 
@@ -177,17 +174,48 @@ function render(i) {
   $(".lb-count", lb).textContent = `${i + 1} / ${lbPhotos.length}`;
 }
 
-// ── Contact form (opens the visitor's email app) ────────
+// ── Contact form (sent via Web3Forms; your email is never shown) ──
 function initContact() {
   const form = $(".form");
   if (!form) return;
-  $("[data-email]").innerHTML = `<a href="mailto:${esc(SITE.email)}">${esc(SITE.email)}</a>`;
-  form.addEventListener("submit", (e) => {
+  const status = $(".form-status");
+  const button = $("button[type=submit]", form);
+  const say = (msg, kind) => { status.textContent = msg; status.className = `form-status ${kind || ""}`; };
+
+  if (!SITE.formKey) {
+    say("The contact form isn't switched on yet.", "error");
+    button.disabled = true;
+    return;
+  }
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const d = new FormData(form);
-    const subject = `${d.get("topic")} — from ${d.get("name")}`;
-    const body = `${d.get("message")}\n\n${d.get("name")}\n${d.get("email")}`;
-    location.href = `mailto:${SITE.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const d = Object.fromEntries(new FormData(form));
+    if (d.botcheck) return; // hidden field only bots fill in
+    button.disabled = true;
+    say("Sending…");
+    try {
+      const res = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          access_key: SITE.formKey,
+          subject: `${d.topic} — from ${d.name} (website)`,
+          from_name: d.name,
+          name: d.name,
+          email: d.email,
+          topic: d.topic,
+          message: d.message,
+        }),
+      });
+      const out = await res.json();
+      if (!out.success) throw new Error(out.message);
+      form.reset();
+      say("Thanks — your message has been sent. I'll get back to you soon.", "ok");
+    } catch {
+      say("Sorry, something went wrong sending your message. Please try again later.", "error");
+    } finally {
+      button.disabled = false;
+    }
   });
 }
 
@@ -206,4 +234,3 @@ initGallery();
 initContact();
 initReveal();
 document.querySelectorAll("[data-portrait]").forEach((el) => (el.src = SITE.portrait));
-document.querySelectorAll("[data-site-location]").forEach((el) => (el.textContent = SITE.location));
