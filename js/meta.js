@@ -382,5 +382,10 @@ const META = {
   "location": "UK",
   "date": "2026-09-18",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 400 \u00b7 100mm"
+ },
+ "seahorse_signature.jpg": {
+  "location": "Malta",
+  "date": "2026-10-23",
+  "settings": "f/13 \u00b7 1/200s \u00b7 ISO 320 \u00b7 100mm"
  }
 };

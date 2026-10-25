@@ -145,6 +145,7 @@ const GALLERIES = [
     photos: [
       photo("dsc01781-1.jpg"),
       photo("dsc02327.jpg"),
+      photo("seahorse_signature.jpg"),
     ],
   },
 ];
