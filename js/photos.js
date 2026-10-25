@@ -28,7 +28,7 @@ const SITE = {
 
 // Full-screen slideshow on the home page (landscape shots work best)
 const HERO = [
-  photo("dsc01883.jpg"),
+  { ...photo("dsc01883-flipped.jpg"), focus: "15% 40%" }, // mirrored so the head sits on the left
   photo("dsc01898.jpg"),
   photo("dsc01710.jpg"),
   photo("dsc01301.jpg"),

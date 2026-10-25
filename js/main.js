@@ -55,6 +55,7 @@ function initHero() {
     const el = document.createElement("div");
     el.className = "hero-slide";
     el.style.backgroundImage = `url("${s.src}")`;
+    if (s.focus) el.style.backgroundPosition = s.focus; // keep the subject in frame when cropped
     hero.prepend(el);
     const dot = document.createElement("button");
     dot.setAttribute("aria-label", `Show photo ${i + 1}`);
