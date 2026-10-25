@@ -74,6 +74,34 @@ function initHero() {
     setTimeout(() => { caption.textContent = HERO[i].caption; caption.style.opacity = 1; }, 400);
   }
   const restart = () => { clearInterval(timer); timer = setInterval(() => show((current + 1) % slides.length), 6000); };
+  const go = (d) => { show((current + d + slides.length) % slides.length); restart(); };
+
+  // Previous / next arrows
+  const chevron = (pts) => `<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="${pts}"/></svg>`;
+  [["prev", "Previous photo", "15 5 8 12 15 19", -1], ["next", "Next photo", "9 5 16 12 9 19", 1]].forEach(([cls, label, pts, d]) => {
+    const btn = document.createElement("button");
+    btn.className = `hero-arrow hero-${cls}`;
+    btn.setAttribute("aria-label", label);
+    btn.innerHTML = chevron(pts);
+    btn.addEventListener("click", () => go(d));
+    hero.append(btn);
+  });
+
+  // Swipe on touch screens, arrow keys on desktop
+  let x0 = null;
+  hero.addEventListener("touchstart", (e) => (x0 = e.touches[0].clientX), { passive: true });
+  hero.addEventListener("touchend", (e) => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+    x0 = null;
+  });
+  document.addEventListener("keydown", (e) => {
+    if (window.scrollY > hero.offsetHeight / 2) return; // only while the slideshow is in view
+    if (e.key === "ArrowLeft") go(-1);
+    if (e.key === "ArrowRight") go(1);
+  });
+
   show(0);
   restart();
 }
