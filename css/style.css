@@ -130,18 +130,32 @@ a { color: inherit; text-decoration: none; }
 .section-head { margin-bottom: clamp(36px, 5vw, 60px); }
 
 /* ── Gallery tiles ──────────────────────────────────── */
-.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.tile { position: relative; aspect-ratio: 4 / 5; overflow: hidden; background: var(--bg-2); }
-@media (max-width: 900px) {
+.tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.tile { position: relative; aspect-ratio: 3 / 4; overflow: hidden; background: var(--bg-2); }
+@media (max-width: 1100px) { .tiles { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 700px) {
   .tiles { grid-template-columns: 1fr; }
   .tile { aspect-ratio: 3 / 2; }
 }
 .tile img { width: 100%; height: 100%; object-fit: cover; transition: transform 1.2s ease, filter .6s; filter: brightness(.72); }
 .tile:hover img { transform: scale(1.05); filter: brightness(.9); }
-.tile-label { position: absolute; left: 28px; bottom: 24px; right: 28px; }
-.tile-label h3 { font-family: var(--serif); font-weight: 400; font-size: 2rem; }
-.tile-label p { font-size: .85rem; color: rgba(255,255,255,.8); }
+.tile-label { position: absolute; left: 20px; bottom: 20px; right: 20px; }
+.tile-label h3 { font-family: var(--serif); font-weight: 400; font-size: clamp(1.6rem, 2.2vw, 2rem); line-height: 1.1; margin-bottom: 6px; }
+.tile-label p { font-size: .8rem; line-height: 1.45; color: rgba(255,255,255,.8); }
 .tile-label .count { font-size: .68rem; letter-spacing: .25em; text-transform: uppercase; color: var(--accent); margin-top: 6px; }
+
+/* ── Location filter ───────────────────────────────── */
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin: -18px 0 28px; }
+.filters button {
+  font: inherit; font-size: .7rem; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--muted); background: transparent; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 999px; padding: 9px 16px;
+  transition: color .2s, border-color .2s, background .2s;
+}
+.filters button span { color: var(--accent); margin-left: 4px; letter-spacing: normal; }
+.filters button:hover { color: var(--text); border-color: rgba(255,255,255,.3); }
+.filters button.active { color: var(--bg); background: var(--text); border-color: var(--text); }
+.filters button.active span { color: var(--bg); opacity: .6; }
 
 /* ── Masonry photo grid ─────────────────────────────── */
 .masonry { columns: 5 240px; column-gap: 6px; }
@@ -171,6 +185,8 @@ a { color: inherit; text-decoration: none; }
 .lightbox.open { opacity: 1; pointer-events: auto; }
 .lightbox img { max-width: 92vw; max-height: 82vh; object-fit: contain; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
 .lb-caption { margin-top: 18px; font-size: .85rem; color: var(--muted); letter-spacing: .05em; text-align: center; padding: 0 16px; }
+.lb-caption:empty { display: none; }
+.lb-meta { margin-top: 12px; font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); text-align: center; padding: 0 16px; }
 .lb-btn {
   position: absolute; background: none; border: 0; color: rgba(255,255,255,.7);
   font-size: 2.2rem; cursor: pointer; padding: 16px; line-height: 1; transition: color .2s;

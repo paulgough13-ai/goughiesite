@@ -2,6 +2,13 @@
 const $ = (sel, root = document) => root.querySelector(sel);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+// Date, location and camera settings for a photo (from js/meta.js)
+const metaOf = (p) => (typeof META !== "undefined" && META[p.src.split("/").pop()]) || {};
+const fmtDate = (iso) => {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+};
+
 // ── Header & footer ─────────────────────────────────────
 function renderChrome() {
   const page = document.body.dataset.page;
@@ -133,19 +140,47 @@ function initGallery() {
   $(".section-title").textContent = g.title;
   $(".lede").textContent = g.blurb;
 
-  grid.innerHTML = g.photos.map((p, i) => `
-    <figure data-i="${i}">
-      <img src="${esc(p.thumb || p.src)}" alt="${esc(p.caption || `${g.title} photograph`)}" loading="lazy">
-      ${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ""}
-    </figure>`).join("");
-  grid.querySelectorAll("img").forEach((img) => {
-    if (img.complete) img.classList.add("loaded");
-    else img.addEventListener("load", () => img.classList.add("loaded"));
+  // Location filter — only shown when a gallery has photos from more than one place
+  const counts = {};
+  g.photos.forEach((p) => { const loc = metaOf(p).location; if (loc) counts[loc] = (counts[loc] || 0) + 1; });
+  const places = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+  const params = new URLSearchParams(location.search);
+  let place = places.includes(params.get("loc")) ? params.get("loc") : "";
+  let shown = [];
+
+  const filters = $(".filters");
+  function renderFilters() {
+    if (places.length < 2) { filters.hidden = true; return; }
+    filters.innerHTML = [["", "All locations", g.photos.length], ...places.map((l) => [l, l, counts[l]])]
+      .map(([val, label, n]) => `<button data-loc="${esc(val)}" class="${val === place ? "active" : ""}" aria-pressed="${val === place}">${esc(label)} <span>${n}</span></button>`).join("");
+  }
+  function renderGrid() {
+    shown = place ? g.photos.filter((p) => metaOf(p).location === place) : g.photos;
+    grid.innerHTML = shown.map((p, i) => `
+      <figure data-i="${i}">
+        <img src="${esc(p.thumb || p.src)}" alt="${esc(p.caption || `${g.title} photograph`)}" loading="lazy">
+        ${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ""}
+      </figure>`).join("");
+    grid.querySelectorAll("img").forEach((img) => {
+      if (img.complete) img.classList.add("loaded");
+      else img.addEventListener("load", () => img.classList.add("loaded"));
+    });
+  }
+  filters.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    place = btn.dataset.loc;
+    place ? params.set("loc", place) : params.delete("loc");
+    history.replaceState(null, "", `?${params}`);
+    renderFilters();
+    renderGrid();
   });
   grid.addEventListener("click", (e) => {
     const fig = e.target.closest("figure");
-    if (fig) openLightbox(g.photos, +fig.dataset.i);
+    if (fig) openLightbox(shown, +fig.dataset.i);
   });
+  renderFilters();
+  renderGrid();
 
   const prev = GALLERIES[(idx - 1 + GALLERIES.length) % GALLERIES.length];
   const next = GALLERIES[(idx + 1) % GALLERIES.length];
@@ -166,6 +201,7 @@ function buildLightbox() {
     <button class="lb-btn lb-prev" aria-label="Previous">‹</button>
     <img alt="">
     <p class="lb-caption"></p>
+    <p class="lb-meta"></p>
     <button class="lb-btn lb-next" aria-label="Next">›</button>`;
   document.body.append(lb);
   $(".lb-close", lb).onclick = closeLightbox;
@@ -203,6 +239,8 @@ function render(i) {
   $("img", lb).src = p.src;
   $("img", lb).alt = p.caption || "Underwater photograph";
   $(".lb-caption", lb).textContent = p.caption;
+  const m = metaOf(p);
+  $(".lb-meta", lb).textContent = [m.location, m.date && fmtDate(m.date), m.settings].filter(Boolean).join("  ·  ");
   $(".lb-count", lb).textContent = `${i + 1} / ${lbPhotos.length}`;
   // Count full-size photo views in GoatCounter (shows as "photo/<file>" events)
   if (window.goatcounter && window.goatcounter.count) {
