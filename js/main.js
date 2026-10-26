@@ -240,7 +240,9 @@ function render(i) {
   $("img", lb).alt = p.caption || "Underwater photograph";
   $(".lb-caption", lb).textContent = p.caption;
   const m = metaOf(p);
-  $(".lb-meta", lb).textContent = [m.location, m.date && fmtDate(m.date), m.settings].filter(Boolean).join("  ·  ");
+  const where = [m.location, m.date && fmtDate(m.date)].filter(Boolean).join("  ·  ");
+  $(".lb-meta", lb).innerHTML = [where, m.settings, m.gear].filter(Boolean)
+    .map((line, n) => `<span class="lb-line${n === 2 ? " lb-gear" : ""}">${esc(line)}</span>`).join("");
   $(".lb-count", lb).textContent = `${i + 1} / ${lbPhotos.length}`;
   // Count full-size photo views in GoatCounter (shows as "photo/<file>" events)
   if (window.goatcounter && window.goatcounter.count) {

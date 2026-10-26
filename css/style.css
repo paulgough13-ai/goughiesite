@@ -186,7 +186,11 @@ a { color: inherit; text-decoration: none; }
 .lightbox img { max-width: 92vw; max-height: 82vh; object-fit: contain; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
 .lb-caption { margin-top: 18px; font-size: .85rem; color: var(--muted); letter-spacing: .05em; text-align: center; padding: 0 16px; }
 .lb-caption:empty { display: none; }
-.lb-meta { margin-top: 12px; font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); text-align: center; padding: 0 16px; }
+.lb-meta { margin-top: 12px; font-size: .74rem; letter-spacing: .08em; color: var(--muted); text-align: center; padding: 0 16px; line-height: 1.5; }
+.lb-line { display: block; }
+.lb-line:first-child { text-transform: uppercase; letter-spacing: .14em; font-size: .72rem; }
+.lb-line + .lb-line { margin-top: 2px; }
+.lb-gear { opacity: .85; }
 .lb-btn {
   position: absolute; background: none; border: 0; color: rgba(255,255,255,.7);
   font-size: 2.2rem; cursor: pointer; padding: 16px; line-height: 1; transition: color .2s;
