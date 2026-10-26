@@ -4,451 +4,451 @@ const META = {
   "location": "Dominican Republic",
   "date": "2026-08-30",
   "settings": "f/18 \u00b7 1/200s \u00b7 ISO 50",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01231.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-30",
   "settings": "f/18 \u00b7 1/200s \u00b7 ISO 100",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01255.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-30",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 100",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01274-1.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-30",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 320",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01274-2.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-30",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 320",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01274-3.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-30",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 320",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01274.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-30",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 320",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01281.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-30",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 640",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01301.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-30",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 400",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01303.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-30",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 400",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01306-1.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-30",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 200",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01320.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-30",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 100",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01322.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-30",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 100",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01337-1.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-30",
   "settings": "f/18 \u00b7 1/200s \u00b7 ISO 100",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01337-2.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-30",
   "settings": "f/18 \u00b7 1/200s \u00b7 ISO 100",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01337.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-30",
   "settings": "f/18 \u00b7 1/200s \u00b7 ISO 100",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01347.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-31",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 125",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01369.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-31",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 125",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01381.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-31",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 125",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01442.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-31",
   "settings": "f/13 \u00b7 1/250s \u00b7 ISO 160",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01455.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-31",
   "settings": "f/13 \u00b7 1/200s \u00b7 ISO 160",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01496.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-31",
   "settings": "f/13 \u00b7 1/200s \u00b7 ISO 64",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01497.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-31",
   "settings": "f/13 \u00b7 1/250s \u00b7 ISO 64",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01502.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-31",
   "settings": "f/13 \u00b7 1/250s \u00b7 ISO 64",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01508.jpg": {
   "location": "Dominican Republic",
   "date": "2026-08-31",
   "settings": "f/13 \u00b7 1/250s \u00b7 ISO 125",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01581.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-01",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 160",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01594.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-01",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 1000",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01614.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-01",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 160",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01615.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-01",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 160",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01625.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-01",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 400",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01649.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-01",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 400",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01653.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-01",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 400",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01672-1.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-03",
   "settings": "f/20 \u00b7 1/200s \u00b7 ISO 80",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01680.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-03",
   "settings": "f/20 \u00b7 1/200s \u00b7 ISO 100",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01683.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-03",
   "settings": "f/20 \u00b7 1/200s \u00b7 ISO 100",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01688.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-03",
   "settings": "f/20 \u00b7 1/200s \u00b7 ISO 400",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01694.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-03",
   "settings": "f/20 \u00b7 1/200s \u00b7 ISO 100",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01700.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-03",
   "settings": "f/20 \u00b7 1/200s \u00b7 ISO 100",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01705.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-03",
   "settings": "f/20 \u00b7 1/200s \u00b7 ISO 5000",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01710.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-03",
   "settings": "f/20 \u00b7 1/200s \u00b7 ISO 250",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01713.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-03",
   "settings": "f/20 \u00b7 1/200s \u00b7 ISO 250",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01715.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-03",
   "settings": "f/20 \u00b7 1/200s \u00b7 ISO 250",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01717.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-03",
   "settings": "f/20 \u00b7 1/200s \u00b7 ISO 250",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01721.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-03",
   "settings": "f/20 \u00b7 1/200s \u00b7 ISO 250",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01734.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-04",
   "settings": "f/20 \u00b7 1/200s \u00b7 ISO 2000",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01740.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-04",
   "settings": "f/20 \u00b7 1/200s \u00b7 ISO 250",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01744.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-04",
   "settings": "f/20 \u00b7 1/200s \u00b7 ISO 250",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01759-1.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-04",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 4000",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01770.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-04",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 4000",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01774.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-04",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 400",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01781-1.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-04",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 1250",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01802.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-04",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 500",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01807.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-04",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 500",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01810.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-04",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 800",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01819.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-04",
   "settings": "f/9 \u00b7 1/200s \u00b7 ISO 100",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01833-1.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-04",
   "settings": "f/9 \u00b7 1/200s \u00b7 ISO 400",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01833.jpg": {
   "location": "Dominican Republic",
   "date": "2026-09-04",
   "settings": "f/9 \u00b7 1/200s \u00b7 ISO 400",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01883-1.jpg": {
   "location": "UK",
   "date": "2026-09-18",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 400",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01883.jpg": {
   "location": "UK",
   "date": "2026-09-18",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 400",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01894.jpg": {
   "location": "UK",
   "date": "2026-09-18",
   "settings": "f/22 \u00b7 1/160s \u00b7 ISO 400",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01898-1.jpg": {
   "location": "UK",
   "date": "2026-09-18",
   "settings": "f/11 \u00b7 1/250s \u00b7 ISO 400",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01898.jpg": {
   "location": "UK",
   "date": "2026-09-18",
   "settings": "f/11 \u00b7 1/250s \u00b7 ISO 400",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01911.jpg": {
   "location": "UK",
   "date": "2026-09-18",
   "settings": "f/11 \u00b7 1/250s \u00b7 ISO 200",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc01917.jpg": {
   "location": "UK",
   "date": "2026-09-18",
   "settings": "f/7.1 \u00b7 1/250s \u00b7 ISO 200",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc02050.jpg": {
   "location": "Malta",
   "date": "2026-10-19",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 500",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc02052-1.jpg": {
   "location": "Malta",
   "date": "2026-10-19",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 500",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc02132.jpg": {
   "location": "Malta",
   "date": "2026-10-20",
   "settings": "f/11 \u00b7 1/200s \u00b7 ISO 160",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc02191-1.jpg": {
   "location": "Malta",
   "date": "2026-10-20",
   "settings": "f/11 \u00b7 1/200s \u00b7 ISO 800",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc02215-1.jpg": {
   "location": "Malta",
   "date": "2026-10-21",
   "settings": "f/20 \u00b7 1/200s \u00b7 ISO 1250",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc02237-1.jpg": {
   "location": "Malta",
   "date": "2026-10-21",
   "settings": "f/11 \u00b7 1/160s \u00b7 ISO 640",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc02289.jpg": {
   "location": "Malta",
   "date": "2026-10-23",
   "settings": "f/6.3 \u00b7 1/200s \u00b7 ISO 160",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc02310.jpg": {
   "location": "Malta",
   "date": "2026-10-23",
   "settings": "f/13 \u00b7 1/200s \u00b7 ISO 640",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc02318.jpg": {
   "location": "Malta",
   "date": "2026-10-23",
   "settings": "f/13 \u00b7 1/200s \u00b7 ISO 640",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc02327.jpg": {
   "location": "Malta",
   "date": "2026-10-23",
   "settings": "f/13 \u00b7 1/200s \u00b7 ISO 320",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "dsc02355.jpg": {
   "location": "Malta",
   "date": "2026-10-23",
   "settings": "f/13 \u00b7 1/200s \u00b7 ISO 200",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "img-20260530-wa0020-1.jpg": {
   "location": "Dominican Republic"
@@ -457,12 +457,12 @@ const META = {
   "location": "UK",
   "date": "2026-09-18",
   "settings": "f/22 \u00b7 1/200s \u00b7 ISO 400",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  },
  "seahorse_signature.jpg": {
   "location": "Malta",
   "date": "2026-10-23",
   "settings": "f/13 \u00b7 1/200s \u00b7 ISO 320",
-  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing"
+  "gear": "Sony \u03b17R VI \u00b7 Sony FE 100mm F2.8 Macro GM OSS \u00b7 Nauticam housing \u00b7 Retra Maxi Strobe"
  }
 };
