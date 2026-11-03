@@ -687,6 +687,7 @@ function dayPlan(n, day, len) {
   if (!mainItems.length) { if ((sp = spareEx())) mainItems.push(exItem(sp)); else if (tech) mainItems.push({ task: "Build on the technique block: " + tech.replace(/\.$/, "") + ", now aiming at this week's goal", ex: null, last: null }); }
   if ((sp = spareEx())) mainItems.push(exItem(sp));
   if (!theoryItems.length) theoryItems.push({ task: (boardNames.length ? "Name every note in this week's diagrams out loud (" + boardNames.slice(0, 3).join(", ") + (boardNames.length > 3 ? " and " + (boardNames.length - 3) + " more" : "") + ")" : "Name the notes on the strings this week uses") + ", then a 20 note round of the fretboard quiz", ex: null, last: null, link: ["#fretboard-quiz", "Open the fretboard quiz"] });
+  if (day === 6) theoryItems.unshift({ task: (wk(n).exam && wk(n).exam.passed) ? "Theory exam passed. Retake it for a higher score if you like" : "Take this week's theory exam (pass mark " + EXAM_PASS + " of " + EXAM_LEN + ")", ex: null, last: null, link: ["#exam-" + n, "Open the exam"] });
   var techB = { name: "Technique", min: 15, items: techItems };
   var theoryB = { name: "Theory and fretboard", min: 10, items: theoryItems };
   mainItems.push({ task: "Goal for the week: " + stripHtml(w.goal), ex: null, last: null, goal: true });
@@ -1241,11 +1242,12 @@ function viewWeek(n) {
     '<div class="board-grid">' + boardsHTML(w.boards) + '</div><div class="legend"><span class="l-root">Root</span>' + (hasHl ? '<span class="l-hl">Character or target note</span>' : "") + "<span>Other notes</span></div></div></section>" +
     '<div class="wrap"><div class="main"><article class="lesson">' + play +
     w.lesson.map(function (s) { return "<section><h2>" + esc(s[0]) + "</h2>" + s[1] + "</section>"; }).join("") +
-    coachHTML(["Give me a fresh variation of this week's main exercise", "I'm finding this week hard. How should I adjust?", "Explain the key idea of this week another way", "What should I listen for when I review my clip?"]) +
+    examCardHTML(n) + coachHTML(["Give me a fresh variation of this week's main exercise", "I'm finding this week hard. How should I adjust?", "Explain the key idea of this week another way", "What should I listen for when I review my clip?"]) +
     '<details class="about"><summary>About Phase ' + w.phase + "</summary>" + D.intros[w.phase - 1] + "</details></article>" +
     '<aside class="panel"><div class="card"><h2>This week\'s practice</h2><p class="sub check-count">0 ticked</p><ul class="checklist">' + checks.join("") + "</ul>" +
     '<p class="rate-label">How solid does this week feel?</p><div class="seg small rating" role="group" aria-label="Rate this week">' +
     RATINGS.map(function (r) { return '<button type="button" data-rate="' + r + '" aria-pressed="' + (p.rating === r) + '">' + r + "</button>"; }).join("") + "</div>" +
+    '<p class="ex-panel"><a href="#exam">Theory exam</a> <span class="ex-panel-st">' + examBadge(n) + '</span></p>' +
     '<button type="button" class="btn ghost week-done" aria-pressed="false">Mark week complete</button></div>' +
     '<div class="rv-slot">' + revisitHTML(n) + "</div>" + timerHTML(n) + metronomeHTML() +
     '<div class="card"><h2>Log a session</h2>' + logFormHTML(n, w.ex) + '<div class="wk-entries"></div><a class="linkbtn" href="#log">See your full log and charts</a></div>' +
@@ -1264,6 +1266,7 @@ function viewWeek(n) {
     var f = $(".logform", app); $(".lf-min", f).value = mins; $(".lf-ex", f).value = "Full practice session"; f.scrollIntoView({ behavior: "smooth", block: "center" }); $(".lf-ex", f).focus();
   });
   mountCoach($(".coach", app), function () { return weekContext(n); });
+  mountExam($(".exam", app), function () { $(".ex-panel-st", app).innerHTML = examBadge(n); });
   /* checkpoint tasks in the lesson become checkboxes */
   $$("li.task", app).forEach(function (li) {
     var k = li.getAttribute("data-task"), lab = document.createElement("label"), inp = document.createElement("input");
@@ -1283,7 +1286,9 @@ function viewWeek(n) {
     b.checked = !!p.k[b.getAttribute("data-check")];
     b.addEventListener("change", function () { p.k[b.getAttribute("data-check")] = b.checked; saveProgress(); refresh(); });
   });
-  done.addEventListener("click", function () { p.done = !p.done; if (p.done && !p.doneOn) p.doneOn = todayStr(); saveProgress(); refresh(); });
+  done.addEventListener("click", function () {
+    if (!p.done && !(p.exam && p.exam.passed) && !window.confirm("You haven't passed this week's theory exam yet. Mark the week complete anyway?")) { $("#exam", app).scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+    p.done = !p.done; if (p.done && !p.doneOn) p.doneOn = todayStr(); saveProgress(); refresh(); });
   $$("[data-rate]", app).forEach(function (b) {
     b.addEventListener("click", function () {
       p.rating = p.rating === b.getAttribute("data-rate") ? null : b.getAttribute("data-rate"); saveProgress();
@@ -1346,6 +1351,7 @@ var TOOLS = [
   ["fretboard-quiz", "Fretboard quiz", "Name the lit note against the clock"],
   ["ear-trainer", "Ear trainer", "Intervals and chord qualities by ear"],
   ["chord-finder", "Chord and scale finder", "Any chord or scale across the neck"],
+  ["exams", "Theory exams", "One exam per week, with a pass mark and your best score"],
   ["scales", "Scales and chord shapes", "Colour-coded scale degrees, CAGED positions and movable chord shapes"],
   ["backing-tracks", "Backing tracks", "Every vamp and blues in the program, plus your own"],
   ["drone", "Drone", "A held root note for modes and intonation"],
@@ -2096,6 +2102,455 @@ function viewScales() {
   });
 }
 
+/* ===== weekly theory exams ===== */
+/* Questions are generated from music theory (correct note spelling by letter), from the week's own
+   diagrams, and from a short bank of concept questions. 10 questions, pass mark 8. */
+var EXAM_LEN = 10, EXAM_PASS = 8;
+var LET = ["C", "D", "E", "F", "G", "A", "B"], LSEMI = [0, 2, 4, 5, 7, 9, 11];
+var IVT = { "1": [1, 0], b2: [2, 1], "2": [2, 2], "#2": [2, 3], b3: [3, 3], "3": [3, 4], "4": [4, 5], "#4": [4, 6], b5: [5, 6], "5": [5, 7], "#5": [5, 8], b6: [6, 8], "6": [6, 9], bb7: [7, 9], b7: [7, 10], "7": [7, 11] };
+var SCALE_F = { major: "1 2 3 4 5 6 7", ionian: "1 2 3 4 5 6 7", dorian: "1 2 b3 4 5 6 b7", phrygian: "1 b2 b3 4 5 b6 b7", lydian: "1 2 3 #4 5 6 7",
+  mixolydian: "1 2 3 4 5 6 b7", aeolian: "1 2 b3 4 5 b6 b7", minor: "1 2 b3 4 5 b6 b7", locrian: "1 b2 b3 4 b5 b6 b7", harmonic: "1 2 b3 4 5 b6 7",
+  melodic: "1 2 b3 4 5 6 7", minpent: "1 b3 4 5 b7", majpent: "1 2 3 5 6", blues: "1 b3 4 b5 5 b7" };
+var SCALE_N = { major: "major", ionian: "Ionian", dorian: "Dorian", phrygian: "Phrygian", lydian: "Lydian", mixolydian: "Mixolydian", aeolian: "Aeolian", minor: "natural minor",
+  locrian: "Locrian", harmonic: "harmonic minor", melodic: "melodic minor", minpent: "minor pentatonic", majpent: "major pentatonic", blues: "blues scale" };
+var CHORD_F = { "": "1 3 5", m: "1 b3 5", dim: "1 b3 b5", aug: "1 3 #5", "5": "1 5", "7": "1 3 5 b7", maj7: "1 3 5 7", m7: "1 b3 5 b7", m7b5: "1 b3 b5 b7",
+  dim7: "1 b3 b5 bb7", "6": "1 3 5 6", m6: "1 b3 5 6", "m(maj7)": "1 b3 5 7", "7#5": "1 3 #5 b7", sus4: "1 4 5", sus2: "1 2 5" };
+var CHORD_Q = { "": "major", m: "minor", dim: "diminished", aug: "augmented", "5": "power chord", "7": "dominant 7", maj7: "major 7", m7: "minor 7", m7b5: "minor 7 flat 5",
+  dim7: "diminished 7", "6": "major 6", m6: "minor 6", "m(maj7)": "minor major 7", "7#5": "7 sharp 5", sus4: "sus4", sus2: "sus2" };
+var IV_NAME = { "1": "root", b2: "flat 2nd", "2": "2nd", "#2": "sharp 2nd", b3: "minor 3rd", "3": "major 3rd", "4": "perfect 4th", "#4": "augmented 4th", b5: "diminished 5th",
+  "5": "perfect 5th", "#5": "augmented 5th", b6: "minor 6th", "6": "major 6th", bb7: "diminished 7th", b7: "minor 7th", "7": "major 7th" };
+var MAJOR_KEYS = ["C", "G", "D", "A", "E", "B", "F#", "Db", "Ab", "Eb", "Bb", "F"];
+var KEY_ACC = { C: 0, G: 1, D: 2, A: 3, E: 4, B: 5, "F#": 6, F: -1, Bb: -2, Eb: -3, Ab: -4, Db: -5 };
+var MODES7 = ["ionian", "dorian", "phrygian", "lydian", "mixolydian", "aeolian", "locrian"];
+var ORD = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th"];
+
+function rnd(a) { return a[Math.floor(Math.random() * a.length)]; }
+function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function nParse(nm) { var l = LET.indexOf(nm.charAt(0)), acc = 0; for (var i = 1; i < nm.length; i++) acc += nm.charAt(i) === "#" ? 1 : -1; return { l: l, acc: acc, pc: ((LSEMI[l] + acc) % 12 + 12) % 12 }; }
+function nUp(root, tok) {
+  var r = nParse(root), iv = IVT[tok], li = (r.l + iv[0] - 1) % 7, pc = (r.pc + iv[1]) % 12, acc = ((pc - LSEMI[li]) % 12 + 12) % 12;
+  if (acc > 6) acc -= 12;
+  return LET[li] + (acc > 0 ? new Array(acc + 1).join("#") : new Array(-acc + 1).join("b"));
+}
+function spellSet(root, formula) { return formula.split(" ").map(function (t) { return nUp(root, t); }); }
+function chordSym(root, q) { return root + q; }
+function parseSym(sym) { var m = /^([A-G][#b]?)(.*)$/.exec(sym); return { root: m[1], q: m[2] === "min" ? "m" : m[2] }; }
+function alterOne(notes, keepRoot) {
+  var out = notes.slice(), i = keepRoot ? 1 + Math.floor(Math.random() * (notes.length - 1)) : Math.floor(Math.random() * notes.length), n = out[i];
+  out[i] = /#$/.test(n) ? n.slice(0, -1) : /b$/.test(n) ? n.slice(0, -1) : n + (Math.random() < 0.5 ? "#" : "b");
+  return out;
+}
+function mcq(q, a, wrong, why, extra) {
+  var seen = {}; seen[a] = 1; var w = [];
+  wrong.forEach(function (x) { if (x != null && !seen[x] && w.length < 3) { seen[x] = 1; w.push(x); } });
+  if (w.length < 3) return null;
+  var o = { q: q, a: a, opts: shuffle([a].concat(w)), why: why };
+  if (extra) for (var k in extra) o[k] = extra[k];
+  return o;
+}
+function noteWrongs(a) {
+  var p = nParse(a).pc, c = [SHARPS[(p + 1) % 12], FLATS[(p + 11) % 12], SHARPS[(p + 2) % 12], FLATS[(p + 10) % 12], SHARPS[(p + 5) % 12], SHARPS[(p + 7) % 12]];
+  return shuffle(c.filter(function (x) { return nParse(x).pc !== p; }));
+}
+
+var GEN = {
+  note: function (o) {
+    var s = rnd(o.strings || [1, 2, 3, 4, 5, 6]), f, tries = 0;
+    do { f = (o.lo || 1) + Math.floor(Math.random() * ((o.hi || 12) - (o.lo || 1) + 1)); tries++; } while (o.natural && SHARPS[midiOf(s, f) % 12].length > 1 && tries < 50);
+    var a = SHARPS[midiOf(s, f) % 12], sn = ["", "high e", "B", "G", "D", "A", "low E"][s];
+    var flat = a.length > 1 ? FLATS[midiOf(s, f) % 12] : null;
+    var r = mcq("What note is at fret " + f + " on the " + sn + " string?", flat ? a + " / " + flat : a, noteWrongs(a).map(function (x) { var p = nParse(x).pc; return SHARPS[p].length > 1 ? SHARPS[p] + " / " + FLATS[p] : x; }),
+      "The open " + sn + " string is " + SHARPS[OPEN[s] % 12] + ". Counting up " + f + (f === 1 ? " fret" : " frets") + " (one semitone each) lands on " + (flat ? a + " (also called " + flat + ")" : a) + ".",
+      { board: { type: "notes", title: "Exam", notes: [[s, f, "?", true]], frets: [0, Math.max(12, f)] } });
+    return r;
+  },
+  chordTones: function (o) {
+    var sym = rnd(o.chords), c = parseSym(sym), notes = spellSet(c.root, CHORD_F[c.q]), a = notes.join(" ");
+    var others = (o.chords.length > 3 ? o.chords : Object.keys(CHORD_F).map(function (q) { return c.root + q; })).filter(function (x) { return x !== sym; })
+      .map(function (x) { var p = parseSym(x); return CHORD_F[p.q] && p.root === c.root ? spellSet(p.root, CHORD_F[p.q]).join(" ") : null; });
+    var alt = [alterOne(notes, true).join(" "), alterOne(notes, true).join(" "), alterOne(notes, true).join(" ")];
+    var near = ["m", "", "7", "m7", "maj7", "dim"].filter(function (q) { return q !== c.q && CHORD_F[q].split(" ").length === notes.length; }).map(function (q) { return spellSet(c.root, CHORD_F[q]).join(" "); });
+    return mcq("Which notes make up " + sym + (c.q === "" ? " major" : "") + "?", a, shuffle(others.concat(near)).slice(0, 2).concat(shuffle(alt)),
+      sym + " is a " + CHORD_Q[c.q] + " chord: " + CHORD_F[c.q].split(" ").map(function (t) { return t === "1" ? "root" : t; }).join(", ") + ", which spells " + a + ".");
+  },
+  chordRole: function (o) {
+    var sym = rnd(o.chords), c = parseSym(sym), toks = CHORD_F[c.q].split(" "), k = 1 + Math.floor(Math.random() * (toks.length - 1)), tok = toks[k];
+    var a = nUp(c.root, tok), role = tok.replace(/^#?b*#?/, "");
+    var label = { "3": "3rd", "5": "5th", "7": "7th", "6": "6th", "4": "4th", "2": "2nd" }[role] || role;
+    var others = toks.filter(function (t, i) { return i !== k; }).map(function (t) { return nUp(c.root, t); });
+    return mcq("What is the " + label + " of " + sym + "?", a, others.concat(noteWrongs(a)),
+      "The " + label + " of " + sym + " is the " + IV_NAME[tok] + " above " + c.root + ": " + a + ". The full chord is " + spellSet(c.root, CHORD_F[c.q]).join(" ") + ".");
+  },
+  chordFormula: function (o) {
+    var q = rnd(o.quals), a = CHORD_Q[q], f = CHORD_F[q].split(" ").map(function (t) { return t === "1" ? "R" : t; }).join(" ");
+    return mcq("Which chord type has the formula " + f + "?", a, shuffle(Object.keys(CHORD_Q).filter(function (x) { return x !== q && CHORD_F[x].split(" ").length === CHORD_F[q].split(" ").length; }).map(function (x) { return CHORD_Q[x]; })),
+      "R " + f.slice(2) + " is the " + a + " chord.");
+  },
+  slashBass: function (o) {
+    var sym = rnd(o.chords), b = sym.split("/")[1], ch = sym.split("/")[0];
+    return mcq("In the slash chord " + sym + ", which note is played lowest?", b, [ch.replace(/m$/, ""), nUp(parseSym(ch).root, "5"), nUp(parseSym(ch).root, "3")].concat(noteWrongs(b)),
+      "The note after the slash is the bass note, so " + sym + " is a " + ch + " chord with " + b + " in the bass.");
+  },
+  scaleNotes: function (o) {
+    var root = rnd(o.roots), sc = rnd(o.scales), notes = spellSet(root, SCALE_F[sc]), nm = root + " " + SCALE_N[sc];
+    if (Math.random() < 0.5 && notes.length >= 5) {
+      var k = 1 + Math.floor(Math.random() * (notes.length - 1)), a = notes[k];
+      return mcq("What is the " + ORD[k + 1] + " note of " + nm + "?", a, notes.filter(function (x, i) { return i !== k; }).concat(noteWrongs(a)),
+        nm + " is " + notes.join(" ") + ", so the " + ORD[k + 1] + " note is " + a + ".");
+    }
+    var otherScales = Object.keys(SCALE_F).filter(function (x) { return x !== sc && SCALE_F[x].split(" ").length === notes.length && SCALE_F[x] !== SCALE_F[sc]; });
+    var wrong = shuffle(otherScales).slice(0, 2).map(function (x) { return spellSet(root, SCALE_F[x]).join(" "); }).concat([alterOne(notes, true).join(" "), alterOne(notes, true).join(" ")]);
+    return mcq("Which is " + nm + "?", notes.join(" "), wrong, nm + " uses the formula " + SCALE_F[sc] + ": " + notes.join(" ") + ".");
+  },
+  majorFormula: function () {
+    return mcq("What is the step pattern of the major scale (W = whole step, H = half step)?", "W W H W W W H", ["W H W W H W W", "W W W H W W H", "H W W W H W W"],
+      "The major scale is W W H W W W H. The half steps fall between the 3rd and 4th, and the 7th and 8th.");
+  },
+  character: function (o) {
+    var CH = { dorian: ["6", "natural minor"], phrygian: ["b2", "natural minor"], lydian: ["#4", "major"], mixolydian: ["b7", "major"], locrian: ["b5", "natural minor"], aeolian: ["b6", "Dorian"] };
+    var m = rnd(o.modes.filter(function (x) { return CH[x]; })), root = rnd(o.roots), tok = CH[m][0], a = nUp(root, tok), notes = spellSet(root, SCALE_F[m]);
+    return mcq("Which note is the character note of " + root + " " + SCALE_N[m] + "?", a, notes.filter(function (x) { return x !== a && x !== root; }).concat(noteWrongs(a)),
+      "Compared with " + root + " " + CH[m][1] + ", " + SCALE_N[m] + " has the " + tok + " (" + a + "). That one note gives the mode its colour.");
+  },
+  modeParent: function (o) {
+    var m = rnd(o.modes.filter(function (x) { return x !== "ionian"; })), root = rnd(o.roots), idx = MODES7.indexOf(m);
+    var ppc = ((nParse(root).pc - [0, 2, 4, 5, 7, 9, 11][idx]) % 12 + 12) % 12, parent = MAJOR_KEYS.filter(function (k) { return nParse(k).pc === ppc; })[0];
+    return mcq(root + " " + SCALE_N[m] + " has the same notes as which major scale?", parent + " major", shuffle(MAJOR_KEYS.filter(function (k) { return k !== parent; })).slice(0, 5).map(function (k) { return k + " major"; }),
+      SCALE_N[m] + " is the " + ORD[idx + 1] + " mode, so " + root + " is the " + ORD[idx + 1] + " note of " + parent + " major.");
+  },
+  modeNumber: function (o) {
+    var m = rnd(o.modes), idx = MODES7.indexOf(m);
+    return mcq("Which mode of the major scale is " + SCALE_N[m] + "?", ORD[idx + 1], ORD.slice(1).filter(function (x, i) { return i !== idx; }),
+      "The order is Ionian, Dorian, Phrygian, Lydian, Mixolydian, Aeolian, Locrian, so " + SCALE_N[m] + " is the " + ORD[idx + 1] + ".");
+  },
+  modeChord: function (o) {
+    var CHQ = { ionian: "maj7", dorian: "m7", phrygian: "m7", lydian: "maj7#11", mixolydian: "7", aeolian: "m7", locrian: "m7b5" };
+    var NAME = { maj7: "major 7", m7: "minor 7", "maj7#11": "major 7 (#11)", "7": "dominant 7", m7b5: "minor 7 flat 5" };
+    var m = rnd(o.modes), a = NAME[CHQ[m]];
+    return mcq("Built from its own root, " + SCALE_N[m] + " forms which 7th chord?", a, shuffle(["major 7", "minor 7", "dominant 7", "minor 7 flat 5", "diminished 7"].filter(function (x) { return x !== a && !(a === "major 7 (#11)" && x === "major 7"); })),
+      "Stacking the 1st, 3rd, 5th and 7th of " + SCALE_N[m] + " gives a " + a + " chord.");
+  },
+  interval: function (o) {
+    var toks = o.toks || ["b2", "2", "b3", "3", "4", "b5", "5", "b6", "6", "b7", "7"], tok = rnd(toks), root = rnd(o.roots || ["C", "D", "E", "F", "G", "A", "Bb", "Eb"]), top = nUp(root, tok);
+    var kind = Math.random();
+    if (kind < 0.4) return mcq("What interval is " + root + " up to " + top + "?", IV_NAME[tok], shuffle(toks.filter(function (t) { return t !== tok; }).map(function (t) { return IV_NAME[t]; })),
+      root + " to " + top + " is " + IVT[tok][1] + (IVT[tok][1] === 1 ? " semitone" : " semitones") + " and spans " + IVT[tok][0] + " letter names: a " + IV_NAME[tok] + ".");
+    if (kind < 0.75) return mcq("What note is a " + IV_NAME[tok] + " above " + root + "?", top, noteWrongs(top).map(function (x) { return x; }),
+      "A " + IV_NAME[tok] + " is " + IVT[tok][1] + (IVT[tok][1] === 1 ? " semitone" : " semitones") + " and spans " + IVT[tok][0] + " letter names (" + LET.slice(nParse(root).l).concat(LET).slice(0, IVT[tok][0]).join(" ") + "), so the answer is " + top + ".");
+    return mcq("How many semitones are in a " + IV_NAME[tok] + "?", String(IVT[tok][1]), [IVT[tok][1] - 1, IVT[tok][1] + 1, IVT[tok][1] + 2, IVT[tok][1] - 2].filter(function (x) { return x > 0; }).map(String),
+      "A " + IV_NAME[tok] + " is " + IVT[tok][1] + (IVT[tok][1] === 1 ? " semitone (1 fret" : " semitones (" + IVT[tok][1] + " frets") + " on one string).");
+  },
+  diatonic: function (o) {
+    var key = rnd(o.keys), notes = spellSet(key, SCALE_F.major), k = Math.floor(Math.random() * 7), sev = !!o.sevenths;
+    var tri = ["", "m", "m", "", "", "m", "dim"], sv = ["maj7", "m7", "m7", "maj7", "7", "m7", "m7b5"], rn = sev ? ["Imaj7", "iim7", "iiim7", "IVmaj7", "V7", "vim7", "viim7b5"] : ["I", "ii", "iii", "IV", "V", "vi", "vii dim"];
+    var a = notes[k] + (sev ? sv[k] : tri[k]);
+    var wrong = [notes[k] + (sev ? (sv[k] === "7" ? "maj7" : "7") : (tri[k] === "" ? "m" : "")), notes[(k + 1) % 7] + (sev ? sv[(k + 1) % 7] : tri[(k + 1) % 7]), notes[(k + 6) % 7] + (sev ? sv[(k + 6) % 7] : tri[(k + 6) % 7]), notes[(k + 3) % 7] + (sev ? sv[(k + 3) % 7] : tri[(k + 3) % 7])];
+    return mcq("In the key of " + key + " major, what is the " + rn[k] + " chord?", a, wrong,
+      "The " + ORD[k + 1] + " note of " + key + " major is " + notes[k] + ", and that degree is always " + (sev ? CHORD_Q[sv[k]] : CHORD_Q[tri[k]]) + ", so " + rn[k] + " is " + a + ".");
+  },
+  diatonicQuality: function () {
+    var k = Math.floor(Math.random() * 7), tri = ["major", "minor", "minor", "major", "major", "minor", "diminished"], rn = ["I", "ii", "iii", "IV", "V", "vi", "vii"];
+    return mcq("In any major key, what quality is the " + rn[k] + " chord?", tri[k], ["major", "minor", "diminished", "augmented"].filter(function (x) { return x !== tri[k]; }),
+      "Major keys run major, minor, minor, major, major, minor, diminished. The " + rn[k] + " chord is " + tri[k] + ".");
+  },
+  keySig: function (o) {
+    var key = rnd(o.keys || ["G", "D", "A", "E", "B", "F", "Bb", "Eb", "Ab"]), n = KEY_ACC[key], kind = n >= 0 ? "sharps" : "flats", a = String(Math.abs(n));
+    return mcq("How many " + kind + " are in the key of " + key + " major?", a, ["0", "1", "2", "3", "4", "5", "6"].filter(function (x) { return x !== a; }).slice(0, 6),
+      key + " major has " + a + " " + (Math.abs(n) === 1 ? kind.slice(0, -1) : kind) + ": " + spellSet(key, SCALE_F.major).filter(function (x) { return x.length > 1; }).join(" ") + ".");
+  },
+  relative: function (o) {
+    var key = rnd(o.keys || ["C", "G", "D", "A", "E", "F", "Bb", "Eb"]), rel = nUp(key, "6");
+    if (Math.random() < 0.5) return mcq("What is the relative minor of " + key + " major?", rel + " minor", [nUp(key, "3") + " minor", nUp(key, "2") + " minor", nUp(key, "5") + " minor", key + " minor"],
+      "The relative minor starts on the 6th note of the major scale: " + rel + ". " + rel + " minor and " + key + " major share every note.");
+    return mcq("What is the relative major of " + rel + " minor?", key + " major", [nUp(rel, "5") + " major", nUp(rel, "4") + " major", rel + " major", nUp(key, "5") + " major"],
+      "Go up a minor 3rd from " + rel + " to find the relative major: " + key + ".");
+  },
+  circle: function () {
+    var i = Math.floor(Math.random() * 12), cw = Math.random() < 0.5, a = MAJOR_KEYS[(i + (cw ? 1 : 11)) % 12];
+    return mcq("On the circle of fifths, which key comes " + (cw ? "after " : "before ") + MAJOR_KEYS[i] + " going clockwise?", a, MAJOR_KEYS.filter(function (k) { return k !== a && k !== MAJOR_KEYS[i]; }).slice(0, 6).sort(function () { return Math.random() - 0.5; }),
+      "Clockwise each key is a perfect 5th higher. " + (cw ? "A 5th above " + MAJOR_KEYS[i] + " is " + a : "A 5th below " + MAJOR_KEYS[i] + " is " + a) + ".");
+  },
+  capo: function () {
+    var shape = rnd(["G", "C", "D", "A", "E", "Em", "Am"]), fret = 1 + Math.floor(Math.random() * 5), p = parseSym(shape), pc = (nParse(p.root).pc + fret) % 12, nm = (FLAT_KEYS[pc] ? FLATS : SHARPS)[pc] + p.q;
+    return mcq("With a capo at fret " + fret + ", you play a " + shape + " shape. Which chord sounds?", nm, [1, 2, -1, 3].map(function (d) { var q = (pc + d + 12) % 12; return (FLAT_KEYS[q] ? FLATS : SHARPS)[q] + p.q; }),
+      "Each fret raises the shape a semitone. " + shape + " moved up " + fret + " fret" + (fret > 1 ? "s" : "") + " is " + nm + ".");
+  },
+  barre: function () {
+    var shape = rnd(["E", "A"]), minor = Math.random() < 0.4, fret = 1 + Math.floor(Math.random() * 9), pc = (OPEN[shape === "E" ? 6 : 5] + fret) % 12, nm = (FLAT_KEYS[pc] ? FLATS : SHARPS)[pc] + (minor ? "m" : "");
+    return mcq("An " + shape + " shape " + (minor ? "minor" : "major") + " barre chord with the barre at fret " + fret + " is which chord?", nm, [1, -1, 2, 5].map(function (d) { var q = (pc + d + 12) % 12; return (FLAT_KEYS[q] ? FLATS : SHARPS)[q] + (minor ? "m" : ""); }),
+      "The root is on the " + (shape === "E" ? "low E" : "A") + " string under the barre. Fret " + fret + " on that string is " + (FLAT_KEYS[pc] ? FLATS : SHARPS)[pc] + ".");
+  },
+  inversion: function (o) {
+    var sym = rnd(o.chords), c = parseSym(sym), toks = CHORD_F[c.q].split(" "), k = Math.floor(Math.random() * toks.length), inv = ["root position", "1st inversion", "2nd inversion", "3rd inversion"];
+    var bass = nUp(c.root, toks[k]), roleN = toks[k].replace(/^b*#?/, ""), roleW = { "1": "root", "3": "3rd", "5": "5th", "7": "7th" }[roleN];
+    if (Math.random() < 0.5) return mcq(sym + " with " + bass + " (the " + roleW + ") in the bass is which inversion?", inv[k], inv.slice(0, toks.length).filter(function (x, i) { return i !== k; }).concat(["drop 2"]),
+      "Root in the bass is root position, 3rd is 1st inversion, 5th is 2nd inversion and 7th is 3rd inversion.");
+    return mcq("Which note is in the bass of " + sym + " in " + inv[k] + "?", bass, spellSet(c.root, CHORD_F[c.q]).filter(function (x) { return x !== bass; }).concat(noteWrongs(bass)),
+      inv[k] + " puts the " + roleW + " lowest. The " + roleW + " of " + sym + " is " + bass + ".");
+  },
+  bend: function () {
+    var n = rnd(["G", "A", "B", "C", "D", "E", "F#"]), whole = Math.random() < 0.6, a = SHARPS[(nParse(n).pc + (whole ? 2 : 1)) % 12];
+    return mcq("You bend " + n + " up a " + (whole ? "whole step" : "half step") + ". Which pitch should you reach?", a, noteWrongs(a).filter(function (x) { return x !== n; }),
+      "A " + (whole ? "whole step is 2 frets" : "half step is 1 fret") + ", so the target is " + a + ". Check it by fretting " + a + " first.");
+  },
+  harmonic: function () {
+    var s = rnd([6, 5, 4, 3]), f = rnd([5, 7, 12]), open = SHARPS[OPEN[s] % 12], a = f === 7 ? SHARPS[(OPEN[s] + 7) % 12] : open, sn = ["", "e", "B", "G", "D", "A", "low E"][s];
+    return mcq("Which note does the natural harmonic at fret " + f + " of the " + sn + " string sound?", a, noteWrongs(a).concat([SHARPS[(OPEN[s] + 5) % 12]]),
+      f === 12 ? "Fret 12 halves the string: the open note an octave up." : f === 7 ? "Fret 7 divides the string in three: an octave and a 5th above the open note, so " + a + "." : "Fret 5 divides the string in four: two octaves above the open note.");
+  },
+  pentRel: function () {
+    var k = rnd(["C", "G", "D", "A", "E", "F"]), rel = nUp(k, "6");
+    return mcq(rel + " minor pentatonic has the same notes as which major pentatonic?", k + " major pentatonic", [nUp(rel, "5") + " major pentatonic", nUp(rel, "4") + " major pentatonic", rel + " major pentatonic"],
+      "Relative keys share notes. " + rel + " minor pentatonic (" + spellSet(rel, SCALE_F.minpent).join(" ") + ") equals " + k + " major pentatonic.");
+  },
+  keyFromChords: function (o) {
+    var key = rnd(o.keys || ["C", "G", "D", "A", "F"]), n = spellSet(key, SCALE_F.major), minor = o.minor && Math.random() < 0.5;
+    var chords = minor ? [n[5] + "m", n[1] + "m", n[2] + "m", n[3]] : shuffle([n[0], n[3], n[4], n[5] + "m"]);
+    var a = minor ? n[5] + " minor" : key + " major";
+    var wrong = minor ? [key + " major", n[1] + " minor", n[2] + " minor"] : [nUp(key, "5") + " major", nUp(key, "4") + " major", n[5] + " minor"];
+    if (!minor) wrong[2] = MAJOR_KEYS[(MAJOR_KEYS.indexOf(key) + 2) % 12] + " major";
+    return mcq("A song " + (minor ? "keeps resolving to " + n[5] + "m and " : "") + "uses " + chords.join(", ") + ". Which key is it in?", a, wrong,
+      minor ? "These chords all belong to " + key + " major, but the song centres on " + n[5] + "m, so it's the relative minor: " + a + "." : "These are the I, IV, V and vi chords of " + key + " major.");
+  },
+  blues: function (o) {
+    var key = rnd(o.keys || ["A", "E", "G", "C"]), n = spellSet(key, SCALE_F.major), kind = Math.random();
+    if (kind < 0.5) return mcq("In a 12 bar blues in " + key + ", which chord is in bar 5?", n[3] + "7", [n[0] + "7", n[4] + "7", n[5] + "m7"],
+      "Bar 5 always moves to the IV chord. In " + key + " that is " + n[3] + "7.");
+    var b5 = nUp(key, "b5");
+    return mcq("Which note turns " + key + " minor pentatonic into the " + key + " blues scale?", b5, spellSet(key, SCALE_F.minpent).slice(1).concat(noteWrongs(b5)),
+      "The blues scale adds the flat 5 (" + b5 + ") to the minor pentatonic.");
+  },
+  borrowed: function (o) {
+    var key = rnd(o.keys || ["C", "G", "F"]), m = spellSet(key, SCALE_F.minor), M = spellSet(key, SCALE_F.major);
+    var opts = [["iv", m[3] + "m"], ["bVI", m[5]], ["bVII", m[6]], ["bIII", m[2]]], pick = rnd(opts);
+    return mcq("Which of these chords in " + key + " major is borrowed from " + key + " minor?", pick[1], [M[3], M[5] + "m", M[1] + "m", M[4], M[2] + "m"],
+      pick[1] + " is the " + pick[0] + " chord of " + key + " minor. It isn't in " + key + " major, so using it is modal interchange.");
+  },
+  sixths: function (o) {
+    var key = rnd(o.keys || ["C", "G"]), n = spellSet(key, SCALE_F.major), k = Math.floor(Math.random() * 7), a = n[(k + 5) % 7];
+    return mcq("Harmonising in " + key + " major, what note is a diatonic 6th above " + n[k] + "?", a, n.filter(function (x) { return x !== a && x !== n[k]; }),
+      "Count six scale notes up from " + n[k] + " in " + key + " major: " + a + ".");
+  },
+  thirds: function (o) {
+    var key = rnd(o.keys || ["G", "C"]), n = spellSet(key, SCALE_F.major), k = Math.floor(Math.random() * 7), a = n[(k + 2) % 7];
+    return mcq("Playing double stops in 3rds in " + key + " major, which note sits a diatonic 3rd above " + n[k] + "?", a, n.filter(function (x) { return x !== a && x !== n[k]; }),
+      "Skip one scale note up from " + n[k] + " in " + key + " major: " + a + ".");
+  },
+  boardNote: function (o, w) {
+    var bs = (w.boards || []).filter(function (b) { return b.type !== "notes" || b.notes.length; }); if (!bs.length) return null;
+    var b = rnd(bs), x = expand(b), notes = x.notes.filter(function (n) { return n.f >= 0; }); if (!notes.length) return null;
+    var t = rnd(notes), a = SHARPS[t.midi % 12], flat = FLATS[t.midi % 12], ans = a.length > 1 ? a + " / " + flat : a;
+    var spec = { type: "notes", title: "Exam", notes: notes.map(function (n) { return [n.s, n.f, n === t ? "?" : "", n === t]; }), frets: x.range };
+    return mcq("From this week's \"" + b.title + "\" diagram: which note is marked?", ans, noteWrongs(a).map(function (y) { var p = nParse(y).pc; return SHARPS[p].length > 1 ? SHARPS[p] + " / " + FLATS[p] : y; }),
+      "String " + ["", "high e", "B", "G", "D", "A", "low E"][t.s] + ", fret " + t.f + " is " + ans + ".", { board: spec });
+  },
+  boardRole: function (o, w) {
+    var bs = (w.boards || []).filter(function (b) { return b.root; }); if (!bs.length) return null;
+    var b = rnd(bs), x = expand(b), cand = x.notes.filter(function (n) { return n.iv !== null && n.iv !== undefined; }); if (!cand.length) return null;
+    var t = rnd(cand), lab = (b.deg && b.deg[t.iv]) || DEG[t.iv], nice = function (l) { return l === "1" ? "Root" : l; };
+    var labels = {}; cand.forEach(function (n) { labels[nice((b.deg && b.deg[n.iv]) || DEG[n.iv])] = 1; });
+    var pool = Object.keys(labels).filter(function (l) { return l !== nice(lab); }).concat(["Root", "2", "b3", "3", "4", "5", "6", "b7", "7"]);
+    var spec = { type: "notes", title: "Exam", notes: x.notes.map(function (n) { return [n.s, n.f, n === t ? "?" : "", n === t]; }), frets: x.range };
+    return mcq("In this week's \"" + b.title + "\" diagram (root " + b.root + "), what is the marked note's degree?", nice(lab), shuffle(pool),
+      "The marked note is " + nameOf(t.midi, b.flats) + ", which is the " + (lab === "1" ? "root" : lab) + " of " + b.root + ".", { board: spec });
+  }
+};
+
+/* concept questions: [question, answer, [wrong answers], explanation] */
+var EXAM_FACTS = {
+  1: [["In tab, which string does the bottom line show?", "The low E string", ["The high e string", "The A string", "The G string"], "Tab is drawn as if you look down at the guitar: the bottom line is the thickest, low E string."],
+    ["Which pairs of natural notes have no sharp or flat between them?", "B and C, E and F", ["A and B, D and E", "C and D, F and G", "G and A, B and C"], "B to C and E to F are half steps (one fret). Every other pair of naturals has a sharp or flat between."],
+    ["At 60 BPM with one click per beat, how often does the metronome click?", "Once a second", ["Twice a second", "Every two seconds", "60 times a second"], "BPM is beats per minute, so 60 BPM is one beat each second."],
+    ["What note is at fret 12 compared with the open string?", "The same note, an octave higher", ["A perfect 5th higher", "A whole step higher", "The same note, two octaves higher"], "Fret 12 is 12 semitones up: the open note an octave higher."]],
+  2: [["When you practise a one-minute chord change, what are you counting?", "How many clean changes you make in a minute", ["How many strums you play", "How many chords you know", "How long each chord rings"], "The one-minute change drill counts clean changes between two chords; aim to raise the count each day."]],
+  3: [["In a slash chord such as D/F#, what does the note after the slash tell you?", "The bass note", ["The chord to play next", "The top note", "Where to put the capo"], "The letter after the slash is the lowest note. D/F# is a D chord with F# in the bass."],
+    ["What does a power chord contain?", "The root and 5th, with no 3rd", ["The root, 3rd and 5th", "The root and 3rd only", "The root, 5th and 7th"], "A power chord (for example G5) is root and 5th, so it is neither major nor minor."]],
+  4: [["In a major key, which three chords are major?", "I, IV and V", ["I, ii and V", "I, iii and vi", "ii, iii and vi"], "Building triads on each degree gives major on I, IV and V, minor on ii, iii and vi, and diminished on vii."]],
+  5: [["What are the chords of I V vi IV in C major?", "C G Am F", ["C F G Am", "C G Em F", "C Am F G"], "In C: I = C, V = G, vi = Am, IV = F."]],
+  6: [["Where is the root of an E shape barre chord?", "Under the barre on the low E string", ["On the A string", "On the D string", "On the high e string"], "E shape barres take their root from the low E string; A shape barres from the A string."]],
+  7: [["Each step clockwise round the circle of fifths adds one of what?", "Sharp", ["Flat", "Chord", "Octave"], "Clockwise from C: G (1 sharp), D (2), A (3) and so on. Anticlockwise adds flats."],
+    ["On which degree of a major scale does its relative minor start?", "The 6th", ["The 2nd", "The 4th", "The 5th"], "The relative minor starts on the 6th degree: A minor is the relative of C major."]],
+  8: [["Inverting a major 3rd (flipping the notes) gives which interval?", "Minor 6th", ["Major 6th", "Perfect 4th", "Minor 3rd"], "Inversions add to 9 and swap major with minor: a major 3rd inverts to a minor 6th."]],
+  9: [["What is the formula of a diminished triad?", "1 b3 b5", ["1 3 #5", "1 b3 5", "1 3 b5"], "Diminished is a minor 3rd and a diminished 5th: 1 b3 b5."],
+    ["In a 1st inversion triad, which chord tone is lowest?", "The 3rd", ["The root", "The 5th", "The 7th"], "1st inversion has the 3rd in the bass; 2nd inversion has the 5th."]],
+  10: [["A dominant 7 chord is a major triad plus which note?", "b7", ["7", "6", "9"], "Dominant 7 is 1 3 5 b7. Major 7 uses the natural 7."],
+    ["Which three notes make up a shell voicing?", "Root, 3rd and 7th", ["Root, 5th and octave", "3rd, 5th and 7th", "Root, 4th and 5th"], "Shells keep the root and the two notes that define the chord quality: the 3rd and 7th."]],
+  11: [["Going up the neck from the C shape, what is the CAGED order?", "C A G E D", ["C G A E D", "A C E G D", "E D C A G"], "The shapes link in the order C, A, G, E, D, then repeat."]],
+  12: [["How many sixteenth notes fit in one bar of 4/4?", "16", ["8", "12", "4"], "Four sixteenths per beat, four beats per bar: 16."],
+    ["How many eighth note triplets fit in one beat?", "3", ["2", "4", "6"], "A triplet squeezes three notes into the space of two eighths: one beat."],
+    ["How long is a dotted quarter note in 4/4?", "1.5 beats", ["1 beat", "2 beats", "0.75 beats"], "A dot adds half the value: 1 + 0.5 = 1.5 beats."]],
+  14: [["A whole step bend is the same distance as how many frets?", "2", ["1", "3", "4"], "Whole step = two semitones = two frets."]],
+  15: [["What does drop D tuning change?", "The low E string is tuned down a whole step to D", ["Every string drops a half step", "The high e drops to D", "The A string drops to G"], "Only the 6th string moves: E down two semitones to D."],
+    ["What is a hammer-on?", "Fretting a higher note on the same string without picking it", ["Picking a note very hard", "Sliding into a note", "Muting the string with the palm"], "The fretting finger strikes the string hard enough to sound the new note."]],
+  16: [["What does strict alternate picking mean?", "Down and up strokes always alternate", ["Every note is a downstroke", "You pick only the first note on each string", "You sweep through string changes"], "Down, up, down, up, whatever the string changes."]],
+  18: [["What is the order of the major scale modes?", "Ionian, Dorian, Phrygian, Lydian, Mixolydian, Aeolian, Locrian", ["Ionian, Lydian, Dorian, Mixolydian, Phrygian, Aeolian, Locrian", "Dorian, Ionian, Phrygian, Lydian, Aeolian, Mixolydian, Locrian", "Ionian, Dorian, Lydian, Phrygian, Mixolydian, Locrian, Aeolian"], "Starting on each degree of the major scale in turn gives that order."]],
+  19: [["Which major scale modes have a major 3rd?", "Ionian, Lydian and Mixolydian", ["Dorian, Phrygian and Aeolian", "Lydian, Aeolian and Locrian", "Ionian, Dorian and Mixolydian"], "Ionian, Lydian and Mixolydian are the major modes; Dorian, Phrygian and Aeolian are minor; Locrian is diminished."]],
+  20: [["Over a vamp of Am7 to D, which mode fits best?", "A Dorian", ["A Aeolian", "A Phrygian", "A Mixolydian"], "The D major chord contains F#, the natural 6th of A. That is Dorian's character note."],
+    ["Over a vamp of A to G, which mode fits best?", "A Mixolydian", ["A Ionian", "A Lydian", "A Dorian"], "The G chord supplies the b7 (G) over a major A chord: A Mixolydian."]],
+  21: [["How many notes are in a pentatonic scale?", "5", ["6", "7", "4"], "Penta means five."]],
+  22: [["When improvising, which notes give the strongest landing points over a chord?", "Its chord tones", ["Any note a half step above the root", "Notes outside the key", "Only the root of the key"], "Chord tones (root, 3rd, 5th, 7th) sound resolved over the chord you're playing on."]],
+  23: [["Which chord type has a major 3rd and a minor 7th?", "Dominant 7", ["Major 7", "Minor 7", "Minor 7 flat 5"], "Major 3rd plus b7 is the dominant 7 sound."]],
+  25: [["In fingerstyle notation, what do p, i, m and a stand for?", "Thumb, index, middle and ring", ["Pick, index, middle and all", "Palm, index, muting and accent", "Thumb, index, middle and little finger"], "From Spanish: pulgar, indice, medio, anular."]],
+  26: [["What usually tells you the key of a song?", "The chord or note the music resolves to", ["The first chord in the song", "The highest note in the melody", "The chord played the most quickly"], "The tonic is where the music sounds at rest, often the last chord."]],
+  24: [["When you start a transcription, what should you find first?", "The key or tonal centre", ["The fastest passage", "The last note of the solo", "The tempo marking"], "Knowing the key narrows down the likely notes before you work out the details."]],
+  27: [["In tapping, what does the picking hand do?", "It frets notes by hammering onto the fretboard", ["It strums the chord", "It only mutes the strings", "It plays harmonics over fret 12"], "A picking-hand finger taps a note onto the fretboard, then pulls off to the fretting hand's notes."]],
+  28: [["What is hybrid picking?", "Playing with the pick and the free fingers together", ["Switching between two picks", "Picking with the thumb only", "Mixing tapping and sweep picking"], "The pick takes the lower strings while the middle and ring fingers pluck the higher ones."],
+    ["In hybrid picking, which fingers usually pluck alongside the pick?", "Middle and ring", ["Index and middle", "Thumb and index", "Ring and little finger"], "The pick is held by the thumb and index, which leaves the middle and ring fingers free."]],
+  29: [["In sweep picking, how is the pick moved across the strings?", "One continuous stroke in the same direction", ["Strict down-up alternation", "Only upstrokes", "Hybrid picking with the fingers"], "A sweep is one motion through the strings, one note per string."]],
+  30: [["In economy picking, what happens when you change strings?", "You keep moving in the same direction as the last stroke", ["You always restart with a downstroke", "You alternate strictly", "You use a hammer-on"], "Economy picking takes the shortest path, continuing the stroke onto the next string."]],
+  33: [["What are a chord's chord tones?", "Its root, 3rd, 5th and 7th", ["Every note in the key", "Its 9th, 11th and 13th", "The notes a half step below each chord note"], "Targeting the 1, 3, 5 and 7 of each chord makes a solo follow the changes."]],
+  34: [["What is the formula of the blues scale?", "1 b3 4 b5 5 b7", ["1 2 b3 4 5 b6 b7", "1 b3 4 5 b7", "1 2 3 5 6"], "The minor pentatonic with an added b5."]],
+  35: [["Which chords form a minor blues in A?", "Am7, Dm7 and Em7", ["A7, D7 and E7", "Am, D and E7", "Amaj7, Dmaj7 and E7"], "A minor blues uses the i, iv and v chords, usually as minor 7ths (often with a dominant V7)."]],
+  37: [["In a jazz blues in F, which chord comes in bar 2?", "Bb7", ["C7", "F7", "Gm7"], "Jazz blues moves to the IV chord in bar 2 before returning to F7."],
+    ["What is the ii V into Bb?", "Cm7 to F7", ["Gm7 to C7", "Dm7 to G7", "Fm7 to Bb7"], "In Bb, ii is Cm7 and V is F7."]],
+  38: [["What is the formula of a major 7 arpeggio?", "1 3 5 7", ["1 3 5 b7", "1 b3 5 b7", "1 3 #5 7"], "Major 7 uses a major 3rd and a major 7th."]],
+  40: [["Inverting a 6th gives which interval?", "A 3rd", ["A 4th", "A 5th", "A 2nd"], "Inversions add to 9, so a 6th becomes a 3rd. That's why 6ths and 3rds sound related."]],
+  41: [["How is a drop 2 voicing made from a close-position chord?", "The second note from the top drops an octave", ["The top note drops an octave", "The bass note rises an octave", "The third note from the top drops an octave"], "Take a close four-note chord and drop the second voice from the top down an octave."]],
+  42: [["Cm7b5 is also known as which chord?", "C half-diminished", ["C diminished 7", "C minor major 7", "C augmented"], "m7b5 is half-diminished: 1 b3 b5 b7. Fully diminished 7 has a bb7."]],
+  43: [["How is a drop 3 voicing made?", "The third note from the top drops an octave", ["The second note from the top drops an octave", "The top note drops an octave", "The root is left out"], "Drop 3 lowers the third voice from the top, spreading the chord over a skipped string."]],
+  44: [["What does harmonic minor change from natural minor?", "It raises the 7th", ["It raises the 6th", "It lowers the 2nd", "It raises the 3rd"], "Raising the 7th creates a leading note, so the V chord becomes a dominant 7 (E7 in A minor)."]],
+  45: [["Why does a diminished 7 chord repeat every 3 frets?", "It is built from stacked minor 3rds", ["It is built from stacked major 3rds", "It has only three notes", "It is a symmetrical scale of whole steps"], "Every note is a minor 3rd apart, so moving it 3 frets gives the same four notes."]],
+  46: [["Jazz melodic minor is a major scale with which change?", "A flat 3rd", ["A flat 7th", "A sharp 4th", "A flat 6th"], "Melodic minor (ascending) is 1 2 b3 4 5 6 7."],
+    ["Lydian dominant is which mode of melodic minor?", "4th", ["2nd", "5th", "7th"], "Starting melodic minor on its 4th degree gives 1 2 3 #4 5 6 b7."],
+    ["The altered scale is which mode of melodic minor?", "7th", ["4th", "6th", "3rd"], "E altered is F melodic minor started on its 7th note, E."]],
+  47: [["Which melodic minor fits E7alt?", "F melodic minor", ["E melodic minor", "A melodic minor", "B melodic minor"], "The altered scale is melodic minor a half step above the chord's root."]],
+  49: [["What is modal interchange?", "Borrowing chords from the parallel key or mode", ["Changing key for the last chorus", "Playing a melody in two modes at once", "Swapping the order of a progression"], "For example, using Fm (iv from C minor) in C major."],
+    ["What is a contrafact?", "A new melody written over an existing chord progression", ["A song with no chords", "A melody played backwards", "A reharmonised bass line"], "Many bebop tunes are contrafacts of standards' changes."]]
+};
+
+var EXAM_CFG = (function () {
+  var basic = ["G", "C", "D", "Em", "Am", "E", "A"], tri = ["C", "Cm", "Cdim", "Caug", "G", "Gm", "D", "Dm", "F", "Fm", "A", "Am", "Bdim", "E", "Eb"];
+  var sev = ["Cmaj7", "C7", "Cm7", "Cm7b5", "Gmaj7", "G7", "Gm7", "Gm7b5", "Fmaj7", "F7", "Dm7", "Am7", "Bm7b5"];
+  var modesA = ["ionian", "dorian", "phrygian"], modesB = ["lydian", "mixolydian", "aeolian", "locrian"], all7 = MODES7;
+  var mr = ["A", "D", "E", "G", "C"];
+  var C = {
+    1: [["note", { strings: [6, 5], natural: true }], ["note", { strings: [6, 5], natural: true }], ["boardNote"]],
+    2: [["chordTones", { chords: basic }], ["chordRole", { chords: basic }], ["boardRole"], ["boardNote"]],
+    3: [["slashBass", { chords: ["G/B", "C/G", "D/F#", "C/B", "Am/G", "D/A"] }], ["chordTones", { chords: ["G5", "C5", "D5", "E5", "A5"] }], ["boardNote"]],
+    4: [["scaleNotes", { roots: ["C", "G", "D", "F", "A"], scales: ["major"] }], ["majorFormula"], ["diatonicQuality"], ["boardRole"]],
+    5: [["diatonic", { keys: ["G", "C", "D", "A", "E"] }], ["capo"], ["keyFromChords", {}], ["boardRole"]],
+    6: [["barre"], ["barre"], ["chordTones", { chords: ["F", "Fm", "Bb", "Bbm", "G", "C", "A", "Am"] }], ["boardRole"]],
+    7: [["keySig", {}], ["relative", {}], ["circle"], ["scaleNotes", { roots: ["A", "E", "D"], scales: ["minor", "major"] }]],
+    8: [["interval", {}], ["interval", {}], ["interval", {}], ["boardNote"]],
+    9: [["chordTones", { chords: tri }], ["inversion", { chords: ["C", "G", "D", "F", "Am", "Em", "Dm"] }], ["chordFormula", { quals: ["", "m", "dim", "aug"] }], ["boardRole"]],
+    10: [["chordTones", { chords: sev }], ["chordRole", { chords: sev }], ["diatonic", { keys: ["C", "G", "F"], sevenths: true }], ["boardRole"]],
+    11: [["capo"], ["barre"], ["chordTones", { chords: ["C", "A", "G", "E", "D"] }], ["boardNote"]],
+    12: [["note", { natural: true }], ["interval", { toks: ["3", "4", "5"] }]],
+    13: [["note", { strings: [6, 5, 4], natural: true }], ["chordTones", { chords: basic.concat(["F", "Bm"]) }], ["diatonic", { keys: ["G", "C", "D"] }], ["interval", {}], ["keySig", {}], ["chordTones", { chords: sev }]],
+    14: [["bend"], ["bend"], ["harmonic"], ["harmonic"]],
+    15: [["scaleNotes", { roots: ["A", "E", "D"], scales: ["minpent"] }], ["thirds", { keys: ["G", "C"] }], ["boardNote"]],
+    16: [["note", {}], ["scaleNotes", { roots: ["A", "E"], scales: ["minor"] }], ["boardNote"]],
+    17: [["note", {}], ["boardNote"], ["scaleNotes", { roots: ["A", "E"], scales: ["minor", "minpent"] }]],
+    18: [["scaleNotes", { roots: mr, scales: modesA }], ["character", { modes: modesA, roots: mr }], ["modeParent", { modes: modesA, roots: mr }], ["modeNumber", { modes: modesA }], ["boardRole"]],
+    19: [["scaleNotes", { roots: mr, scales: modesB }], ["character", { modes: modesB, roots: mr }], ["modeParent", { modes: modesB, roots: mr }], ["modeNumber", { modes: modesB }], ["boardRole"]],
+    20: [["character", { modes: ["dorian", "mixolydian"], roots: mr }], ["modeParent", { modes: ["dorian", "mixolydian"], roots: mr }], ["chordTones", { chords: ["Am7", "D", "A", "G"] }], ["boardRole"]],
+    21: [["scaleNotes", { roots: ["A", "E", "G", "C"], scales: ["minpent", "majpent"] }], ["pentRel"], ["boardNote"], ["boardRole"]],
+    22: [["scaleNotes", { roots: ["A", "E"], scales: ["minpent"] }], ["pentRel"], ["boardNote"]],
+    23: [["chordFormula", { quals: ["", "m", "7", "maj7", "m7", "m7b5", "dim7"] }], ["interval", {}], ["chordTones", { chords: ["A", "Am", "A7", "Amaj7", "Am7"] }]],
+    24: [["scaleNotes", { roots: ["A", "E", "D"], scales: ["minor"] }], ["relative", {}], ["keyFromChords", { minor: true }]],
+    25: [["chordTones", { chords: ["C", "G", "Am", "D", "Em", "F"] }], ["chordRole", { chords: ["C", "G", "Am", "D"] }], ["boardNote"], ["note", { natural: true }]],
+    26: [["keyFromChords", { minor: true, keys: ["G", "C", "D", "F", "A"] }], ["relative", {}], ["keySig", {}], ["pentRel"]],
+    27: [["chordTones", { chords: ["Am", "F", "G", "Em", "C", "Dm"] }], ["boardRole"], ["boardNote"]],
+    28: [["chordTones", { chords: ["C", "G", "Am", "D", "Em", "F"] }], ["chordRole", { chords: ["C", "G", "Am", "D"] }], ["boardNote"], ["note", { natural: true }]],
+    29: [["chordTones", { chords: ["Am", "C", "Gm", "D", "Em"] }], ["inversion", { chords: ["Am", "C", "G"] }], ["boardRole"]],
+    30: [["note", {}], ["boardNote"]],
+    31: [["character", { modes: ["dorian", "mixolydian"], roots: mr }], ["modeParent", { modes: ["dorian", "mixolydian"], roots: mr }], ["modeChord", { modes: ["ionian", "dorian", "mixolydian"] }], ["scaleNotes", { roots: mr, scales: ["ionian", "dorian", "mixolydian"] }]],
+    32: [["character", { modes: ["phrygian", "lydian", "aeolian"], roots: mr }], ["modeParent", { modes: ["phrygian", "lydian", "aeolian"], roots: mr }], ["modeChord", { modes: ["phrygian", "lydian", "aeolian"] }], ["scaleNotes", { roots: mr, scales: ["phrygian", "lydian", "aeolian"] }]],
+    33: [["chordTones", { chords: ["Dm7", "G7", "Cmaj7", "Am7"] }], ["chordRole", { chords: ["Dm7", "G7", "Cmaj7", "Am7"] }], ["diatonic", { keys: ["C", "F", "G"], sevenths: true }], ["boardRole"]],
+    34: [["blues", {}], ["scaleNotes", { roots: ["A", "E"], scales: ["blues", "minpent"] }], ["chordTones", { chords: ["A7", "D7", "E7"] }], ["boardRole"]],
+    35: [["chordTones", { chords: ["Am7", "Dm7", "Em7", "E7"] }], ["chordRole", { chords: ["Am7", "Dm7", "E7"] }], ["boardRole"]],
+    36: [["chordTones", { chords: ["A7", "D7", "E7"] }], ["scaleNotes", { roots: ["A"], scales: ["minpent", "blues"] }], ["boardNote"]],
+    37: [["chordTones", { chords: ["F7", "Bb7", "Cm7", "Bdim7", "D7", "Gm7", "C7"] }], ["chordRole", { chords: ["F7", "Bb7", "D7", "C7"] }], ["blues", { keys: ["F", "Bb"] }]],
+    38: [["chordTones", { chords: ["Cmaj7", "Fmaj7", "Gmaj7", "Dmaj7"] }], ["diatonic", { keys: ["C", "G"], sevenths: true }], ["boardRole"]],
+    39: [["blues", {}], ["scaleNotes", { roots: ["A", "E"], scales: ["blues"] }], ["chordTones", { chords: ["A7", "D7", "E7", "Am7"] }], ["character", { modes: all7, roots: mr }]],
+    40: [["sixths", {}], ["thirds", { keys: ["C"] }], ["boardNote"]],
+    41: [["inversion", { chords: ["Cmaj7", "C7", "Fmaj7", "G7"] }], ["chordTones", { chords: ["Cmaj7", "C7", "Fmaj7", "G7"] }], ["boardRole"]],
+    42: [["inversion", { chords: ["Cm7", "Cm7b5", "Dm7", "Bm7b5"] }], ["chordTones", { chords: ["Cm7", "Cm7b5", "Dm7", "Bm7b5"] }], ["boardRole"]],
+    43: [["inversion", { chords: ["Cmaj7", "C7", "Cm7", "Cm7b5"] }], ["chordTones", { chords: sev }], ["boardRole"]],
+    44: [["scaleNotes", { roots: ["A", "E", "D"], scales: ["harmonic"] }], ["chordTones", { chords: ["Am(maj7)", "E7", "Dm(maj7)", "A7"] }], ["boardRole"]],
+    45: [["chordTones", { chords: ["G#dim7", "Bdim7", "C#dim7", "E7"] }], ["chordRole", { chords: ["E7", "Am(maj7)"] }], ["boardRole"]],
+    46: [["scaleNotes", { roots: ["A", "D", "C"], scales: ["melodic"] }], ["boardRole"]],
+    47: [["chordTones", { chords: ["Bm7b5", "E7#5", "Am6", "Dm6"] }], ["scaleNotes", { roots: ["D", "F", "A"], scales: ["melodic"] }], ["boardRole"]],
+    48: [["scaleNotes", { roots: ["C", "A"], scales: ["major", "minpent"] }], ["diatonic", { keys: ["C", "G", "F"] }], ["keyFromChords", {}]],
+    49: [["borrowed", {}], ["borrowed", {}], ["chordTones", { chords: ["Fm", "Ab", "Bb", "Eb", "C", "F"] }]],
+    50: [["diatonic", { keys: ["C", "G", "D", "F"] }], ["keyFromChords", { minor: true }], ["boardRole"]],
+    51: [["note", {}], ["note", {}], ["boardNote"]],
+    52: [["note", {}], ["chordTones", { chords: tri.concat(sev) }], ["scaleNotes", { roots: mr, scales: all7 }], ["interval", {}], ["diatonic", { keys: ["C", "G", "D", "F", "Bb"], sevenths: true }], ["character", { modes: all7, roots: mr }]]
+  };
+  C[39] = C[39].concat(C[34].slice(0, 2)); C[26] = C[26].concat([["scaleNotes", { roots: ["G", "E"], scales: ["major", "minpent"] }]]);
+  return C;
+})();
+
+function makeExam(n) {
+  var w = W(n), gens = EXAM_CFG[n] || [["note", {}]], facts = shuffle(EXAM_FACTS[n] || []).slice(0, 3), out = [], seen = {}, tries = 0;
+  facts.forEach(function (f) { var q = mcq(f[0], f[1], f[2], f[3]); if (q) { out.push(q); seen[q.q] = 1; } });
+  while (out.length < EXAM_LEN && tries < 400) {
+    tries++;
+    var g = gens[tries % gens.length], q = null;
+    try { q = GEN[g[0]](g[1] || {}, w); } catch (e) { q = null; }
+    if (q && !seen[q.q]) { seen[q.q] = 1; out.push(q); }
+  }
+  return shuffle(out).slice(0, EXAM_LEN);
+}
+function examState(n) { return wk(n).exam || null; }
+function examBadge(n) {
+  var e = examState(n);
+  return e ? (e.passed ? '<span class="ex-badge pass">Exam passed, best ' + e.best + "/" + EXAM_LEN + "</span>" : '<span class="ex-badge">Best so far ' + e.best + "/" + EXAM_LEN + "</span>") : '<span class="ex-badge todo">Exam not taken</span>';
+}
+function examCardHTML(n) {
+  return '<section class="card exam" id="exam" data-week="' + n + '"><div class="ex-top"><h2>Week ' + n + ' theory exam</h2><span class="ex-status">' + examBadge(n) + "</span></div>" +
+    '<p class="sub">' + EXAM_LEN + " questions on this week's theory. Pass with " + EXAM_PASS + " or more. Every attempt draws new questions.</p>" +
+    '<div class="ex-body"><button type="button" class="btn ex-start">Start the exam</button></div></section>';
+}
+function mountExam(card, onChange) {
+  var n = +card.getAttribute("data-week"), body = $(".ex-body", card), qs = [], i = 0, score = 0, wrong = [];
+  function status() { $(".ex-status", card).innerHTML = examBadge(n); if (onChange) onChange(); }
+  function start() { qs = makeExam(n); i = 0; score = 0; wrong = []; show(); }
+  function show() {
+    var q = qs[i];
+    body.innerHTML = '<div class="ex-prog"><span>Question ' + (i + 1) + " of " + qs.length + "</span><span>Score " + score + '</span></div><div class="ex-bar"><span style="width:' + (100 * i / qs.length) + '%"></span></div>' +
+      '<p class="ex-q">' + esc(q.q) + "</p>" + (q.board ? '<div class="ex-board board-svg"></div>' : "") +
+      '<div class="ex-opts">' + q.opts.map(function (o, k) { return '<button type="button" class="ex-opt" data-k="' + k + '">' + esc(o) + "</button>"; }).join("") + "</div>" +
+      '<div class="ex-why" aria-live="polite"></div><div class="ex-nav" hidden><button type="button" class="btn ex-next">' + (i + 1 < qs.length ? "Next question" : "See your result") + "</button></div>";
+    if (q.board) drawBoard($(".ex-board", body), q.board, { mode: "quiz", slotW: 40 });
+    $$(".ex-opt", body).forEach(function (b) { b.addEventListener("click", function () { answer(+b.getAttribute("data-k")); }); });
+    $(".ex-next", body).addEventListener("click", function () { i++; if (i < qs.length) show(); else finish(); });
+    var first = $(".ex-opt", body); if (first && card.getBoundingClientRect().top < 0) card.scrollIntoView({ block: "start" });
+  }
+  function answer(k) {
+    var q = qs[i], pick = q.opts[k], ok = pick === q.a;
+    if (ok) score++; else wrong.push({ q: q, pick: pick });
+    $$(".ex-opt", body).forEach(function (b) {
+      var o = q.opts[+b.getAttribute("data-k")]; b.disabled = true;
+      if (o === q.a) b.classList.add("right"); else if (o === pick) b.classList.add("wrong");
+    });
+    $(".ex-why", body).innerHTML = (ok ? '<b class="good">Correct.</b> ' : '<b class="bad">Not quite.</b> The answer is ' + esc(q.a) + ". ") + esc(q.why);
+    $(".ex-nav", body).hidden = false; $(".ex-next", body).focus();
+  }
+  function finish() {
+    var pass = score >= EXAM_PASS, p = wk(n), prev = p.exam;
+    p.exam = { best: Math.max(score, prev ? prev.best : 0), passed: pass || !!(prev && prev.passed), last: score, at: todayStr(), attempts: (prev ? prev.attempts || 0 : 0) + 1 };
+    if (pass && !p.exam.passedOn) p.exam.passedOn = todayStr();
+    saveProgress(); status();
+    body.innerHTML = '<div class="ex-result ' + (pass ? "pass" : "fail") + '"><div class="ex-score">' + score + " / " + qs.length + '</div><div class="ex-verdict">' + (pass ? "Passed. This week's theory is done." : "Not yet. You need " + EXAM_PASS + " to pass.") + "</div></div>" +
+      (wrong.length ? '<h3 class="minihead">Review</h3><ul class="ex-review">' + wrong.map(function (x) { return "<li><b>" + esc(x.q.q) + "</b><span>You said " + esc(x.pick) + ". The answer is " + esc(x.q.a) + ".</span><span>" + esc(x.q.why) + "</span></li>"; }).join("") + "</ul>" : "") +
+      '<button type="button" class="btn ' + (pass ? "ghost " : "") + 'ex-start">' + (pass ? "Take it again" : "Try again with new questions") + "</button>";
+    $(".ex-start", body).addEventListener("click", start);
+  }
+  $(".ex-start", body).addEventListener("click", start);
+}
+function viewExams() {
+  var passed = 0; for (var k = 1; k <= 52; k++) { var e = examState(k); if (e && e.passed) passed++; }
+  $("#app").innerHTML = '<div class="wrap pagehead"><div class="eyebrow">Practice tools</div><h1>Theory exams</h1><p class="lede">One exam per week, ' + EXAM_LEN + " questions, pass mark " + EXAM_PASS + ". You have passed " + passed + " of 52.</p></div>" +
+    '<div class="wrap"><ul class="ex-list">' + D.weeks.map(function (w) {
+      return '<li><a href="#exam-' + w.num + '"><span class="ex-n">' + pad2(w.num) + '</span><span class="ex-t">' + esc(w.title) + "</span>" + examBadge(w.num) + "</a></li>";
+    }).join("") + "</ul></div>";
+}
+function viewExam(n) {
+  $("#app").innerHTML = '<div class="wrap pagehead"><div class="eyebrow"><a href="#exams">Theory exams</a></div><h1>Week ' + n + ": " + esc(W(n).title) + '</h1><p class="lede"><a href="' + weekHref(n) + '">Open the week\'s lesson</a></p></div><div class="wrap narrowish">' + examCardHTML(n) + "</div>";
+  mountExam($(".exam", $("#app")));
+}
+
 /* ===== fretboard quiz ===== */
 var SNAME = ["", "e", "B", "G", "D", "A", "E"];
 function viewQuiz() {
@@ -2322,6 +2777,8 @@ function route() {
   else if (h === "tools") { viewTools(); nav = "tools"; }
   else if (h === "fretboard-quiz") { viewQuiz(); nav = "tools"; }
   else if (h === "scales") { viewScales(); nav = "tools"; }
+  else if (h === "exams") { viewExams(); nav = "tools"; }
+  else if (/^exam-\d{1,2}$/.test(h) && +h.slice(5) >= 1 && +h.slice(5) <= 52) { viewExam(+h.slice(5)); nav = "tools"; }
   else if (h === "ear-trainer") { viewEar(); nav = "tools"; }
   else if (h === "chord-finder") { viewFinder(); nav = "tools"; }
   else if (h === "backing-tracks") { viewBacking(); nav = "tools"; }
