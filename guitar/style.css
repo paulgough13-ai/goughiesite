@@ -768,3 +768,26 @@ a.t-v { color: var(--accent); font-size: 20px; text-decoration: none; }
 .dot.dg.root text { fill: #13100b; }
 .dot.hl circle { stroke: var(--accent); stroke-width: 2.6; }
 .dot.dg:hover circle, .dot.dg:focus-visible circle { stroke: var(--ink); stroke-width: 2.4; }
+
+/* practice timer: day-specific plan */
+.t-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 4px 0 8px; font-size: 14px; }
+.t-pick select { font: 14px var(--f-body); padding: 4px 6px; border-radius: 5px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); max-width: 100%; }
+.t-pick label { display: flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }
+.t-pick label:has(.t-week) { flex: 1 1 100%; }
+.t-pick .t-week { flex: 1 1 auto; min-width: 0; width: 100%; }
+.ptimer .blocks li { display: block; padding: 6px 8px; }
+.ptimer .blocks .bh { display: flex; justify-content: space-between; gap: 8px; }
+.ptimer .blocks .bwhat { display: block; font-size: 13px; font-weight: 400; color: var(--muted); margin-top: 2px; line-height: 1.35; }
+.ptimer .blocks li.cur .bwhat { color: var(--ink); }
+.ptimer .blocks li.past { text-decoration: none; }
+.ptimer .blocks li.past .bh { text-decoration: line-through; }
+.tnow { color: var(--ink); min-height: 0; }
+.tn-head { font: 600 13px var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 4px 0 4px; }
+.tn-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.tn-items li { display: grid; gap: 3px; padding-left: 10px; border-left: 2px solid var(--line); }
+.tn-items li.goal { border-left-color: var(--accent); }
+.tn-items .pi-task { font-weight: 600; }
+.tn-items .pi-ex { font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+.tn-items .pi-ex b { color: var(--ink); font-weight: 600; }
+.tn-items .pi-last { font: 12px var(--f-mono); color: var(--accent); }
+.tn-items .pi-link { font-size: 13.5px; }

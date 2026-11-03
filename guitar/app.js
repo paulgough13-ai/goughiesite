@@ -597,44 +597,170 @@ function mountMetronome(root) {
 }
 
 /* ===== practice timer ===== */
-function timerHTML() {
-  return '<div class="card ptimer"><h2>Practice timer</h2><p class="sub">The daily routine, block by block</p>' +
-    '<div class="seg small" role="group" aria-label="Session length"><button type="button" data-len="60" aria-pressed="true">60 min</button><button type="button" data-len="30" aria-pressed="false">30 min</button></div>' +
+/* Builds a day-specific plan from the week's data: its day-by-day tasks, the
+   numbered exercises in the lesson, the weekly goal, Sunday task and backing tracks. */
+var DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+var STOP = { the: 1, a: 1, an: 1, and: 1, or: 1, of: 1, on: 1, in: 1, to: 1, at: 1, with: 1, your: 1, every: 1, each: 1, then: 1, for: 1, one: 1, two: 1, three: 1, all: 1, by: 1, from: 1, it: 1, this: 1, its: 1, plus: 1, into: 1 };
+function stemWords(t) {
+  return String(t).toLowerCase().replace(/<[^>]+>/g, " ").split(/[^a-z0-9#]+/).filter(function (w) { return w && !STOP[w] && !/^\d+$/.test(w); })
+    .map(function (w) { return w.replace(/(ing|es|s)$/, ""); });
+}
+function weekExercises(w) {
+  var sec = w.lesson.filter(function (l) { return /exercise/i.test(l[0]); })[0], out = [];
+  if (!sec) return out;
+  var d = document.createElement("div"); d.innerHTML = sec[1];
+  $$("p, li", d).forEach(function (el) {
+    var st = el.querySelector("strong"); if (!st) return;
+    var name = st.textContent.replace(/^\s*\d+\.\s*/, "").replace(/\.\s*$/, "").trim();
+    var text = el.textContent.replace(st.textContent, "").trim();
+    if (name && text) out.push({ name: name, text: text, words: stemWords(name.replace(/\([^)]*\)/g, "")) });
+  });
+  return out;
+}
+function matchExercise(task, exs) {
+  var tw = stemWords(task), best = null, bs = 0;
+  exs.forEach(function (e) {
+    var hit = e.words.filter(function (x) { return tw.indexOf(x) > -1; }).length, sc = hit / Math.max(1, e.words.length);
+    if (hit && sc > bs) { bs = sc; best = e; }
+  });
+  return bs >= 0.5 ? best : null;
+}
+function lastBpm(match) {
+  var re = match instanceof RegExp ? match : null, hit = null;
+  S.logs.forEach(function (l) {
+    if (!l.bpm || !l.exercise) return;
+    var ok = re ? re.test(l.exercise) : l.exercise === match;
+    if (ok && (!hit || (l.date + l.at) > (hit.date + hit.at))) hit = l;
+  });
+  return hit;
+}
+function dayGroups(w) {
+  if (w.days && w.days.length) return w.days.map(function (d) {
+    var nums = (d[0].match(/\d+/g) || ["1"]).map(Number);
+    return { label: d[0], from: nums[0], to: nums[nums.length - 1], tasks: d[1].replace(/\.\s*$/, "").split(/;\s*/).filter(Boolean) };
+  });
+  var ex = w.ex || [], per = Math.ceil(ex.length / 3) || 1;
+  return [[1, 2], [3, 4], [5, 6]].map(function (r, i) { return { label: "Days " + r[0] + " to " + r[1], from: r[0], to: r[1], tasks: ex.slice(i * per, i * per + per) }; });
+}
+function classifyTask(t) {
+  if (/\b(play|playing|song|improvis\w*|solo|jam|backing|perform|piece|tune|over a|over an)\b/i.test(t)) return "play";
+  if (/\b(name|names|naming|notes?|spell\w*|intervals?|theory|keys?|triads?|degrees?|fretboard|neck|chart|ear|sing|quiz|map|find\w*|write|written|notation|form)\b/i.test(t)) return "theory";
+  return "tech";
+}
+function cap1(t) { t = String(t).trim(); return /^(i|ii|iii|iv|v|vi|vii)\b/.test(t) ? t : t.charAt(0).toUpperCase() + t.slice(1); }
+function dayPlan(n, day, len) {
+  var w = W(n), exs = weekExercises(w), plan;
+  var usedEx = [];
+  function item(task) {
+    var e = matchExercise(task, exs), bp = e ? lastBpm(e.name) : null;
+    if (e) usedEx.push(e);
+    return { task: cap1(task), ex: e, last: bp };
+  }
+  function exItem(e) { usedEx.push(e); return { task: "Exercise: " + e.name, ex: e, last: lastBpm(e.name) }; }
+  function spareEx() { for (var i = 0; i < groupEx.length; i++) if (usedEx.indexOf(groupEx[i]) < 0) return groupEx[i]; return null; }
+  function warm(extra) {
+    var bp = lastBpm(/chromatic|warm/i);
+    return { name: "Warm-up", min: 5, items: [{ task: "Hand stretches, then the chromatic finger exercise" + (bp ? ", starting near your last logged " + bp.bpm + " BPM" : " at a comfortable tempo"), ex: null, last: null }].concat(extra || []) };
+  }
+  if (day === 7) {
+    plan = [warm(),
+      { name: "Rehearse", min: 10, items: [{ task: "Run through the Sunday task a few times until it feels settled: " + stripHtml(w.sunday), ex: null, last: null }] },
+      { name: "Record", min: 5, items: [{ task: "Record a 2 to 3 minute clip of it. Keep both hands in shot, then upload it on this week's page and rest.", ex: null, last: null }] }];
+    return { week: n, day: day, label: "Sunday: record your progress clip", blocks: plan };
+  }
+  var groups = dayGroups(w), grp = groups.filter(function (g) { return day >= g.from && day <= g.to; })[0] || groups[groups.length - 1];
+  var gi = Math.max(0, groups.indexOf(grp)), per = exs.length / Math.max(1, groups.length);
+  var groupEx = exs.slice(Math.round(gi * per), Math.round((gi + 1) * per));
+  var tasks = grp ? grp.tasks.slice() : [], used = {};
+  function take(kind) { for (var i = 0; i < tasks.length; i++) if (!used[i] && (!kind || classifyTask(tasks[i]) === kind)) { used[i] = 1; return tasks[i]; } return null; }
+  var tech = take("tech") || take("theory"), theory = take("theory"), play = [], rest = [];
+  tasks.forEach(function (t, i) { if (used[i]) return; (classifyTask(t) === "play" ? play : rest).push(t); used[i] = 1; });
+  var dayWords = stemWords(tasks.join(" "));
+  var btNames = (w.bt || []).map(function (id) { return D.bt[id] && D.bt[id].name; }).filter(Boolean)
+    .map(function (nm, i) { return { nm: nm, i: i, sc: stemWords(nm).filter(function (x) { return dayWords.indexOf(x) > -1; }).length }; })
+    .sort(function (a, b) { return b.sc - a.sc || a.i - b.i; }).map(function (x) { return x.nm; });
+  var boardNames = (w.boards || []).map(function (b) { return b.title; }).filter(Boolean);
+  var firstDay = day === 1 ? [{ task: "Before you start, watch last Sunday's clip and note one thing to fix this week", ex: null, last: null }] : [];
+  var techItems = tech ? [item(tech)] : [], theoryItems = theory ? [item(theory)] : [], mainItems = rest.map(item), playItems = play.map(item);
+  var sp;
+  if (!techItems.length) techItems.push((sp = spareEx()) ? exItem(sp) : { task: "Your current speed exercise with the metronome, 5 BPM below your limit", ex: null, last: null });
+  if (!mainItems.length) { if ((sp = spareEx())) mainItems.push(exItem(sp)); else if (tech) mainItems.push({ task: "Build on the technique block: " + tech.replace(/\.$/, "") + ", now aiming at this week's goal", ex: null, last: null }); }
+  if ((sp = spareEx())) mainItems.push(exItem(sp));
+  if (!theoryItems.length) theoryItems.push({ task: (boardNames.length ? "Name every note in this week's diagrams out loud (" + boardNames.slice(0, 3).join(", ") + (boardNames.length > 3 ? " and " + (boardNames.length - 3) + " more" : "") + ")" : "Name the notes on the strings this week uses") + ", then a 20 note round of the fretboard quiz", ex: null, last: null, link: ["#fretboard-quiz", "Open the fretboard quiz"] });
+  var techB = { name: "Technique", min: 15, items: techItems };
+  var theoryB = { name: "Theory and fretboard", min: 10, items: theoryItems };
+  mainItems.push({ task: "Goal for the week: " + stripHtml(w.goal), ex: null, last: null, goal: true });
+  var mainB = { name: "Main focus", min: 20, items: mainItems };
+  if (!playItems.length) playItems.push({ task: btNames.length ? "Play today's material over the " + btNames[0] + " backing track" + (btNames.length > 1 ? " (or " + btNames.slice(1).join(", ") + ")" : "") : "Use today's material in a song or over any backing track", ex: null, last: null, link: btNames.length ? ["#week-" + n, "Backing tracks are on this week's page"] : ["#backing-tracks", "Open the backing tracks"] });
+  playItems.push({ task: "Record a short clip of the best take", ex: null, last: null });
+  var playB = { name: "Play", min: 10, items: playItems };
+  var w0 = warm(firstDay);
+  if (len === 30) {
+    plan = [w0, { name: "Main focus", min: 15, items: techB.items.concat(mainItems.filter(function (x) { return !/^Build on the technique/.test(x.task); })) }, playB];
+  } else plan = [w0, techB, theoryB, mainB, playB];
+  return { week: n, day: day, label: grp ? grp.label : "", blocks: plan };
+}
+function planItemHTML(it, full) {
+  var h = '<span class="pi-task">' + esc(it.task) + "</span>";
+  if (full && it.ex) h += '<span class="pi-ex"><b>' + esc(it.ex.name) + ".</b> " + esc(it.ex.text) + "</span>";
+  if (full && it.last) h += '<span class="pi-last">Last logged: ' + it.last.bpm + " BPM on " + esc(it.last.date) + "</span>";
+  if (full && it.link) h += '<a class="pi-link" href="' + it.link[0] + '">' + esc(it.link[1]) + "</a>";
+  return '<li class="' + (it.goal ? "goal" : "") + '">' + h + "</li>";
+}
+function timerHTML(fixedWeek) {
+  var wsel = fixedWeek ? "" : '<label>Week <select class="t-week">' + D.weeks.map(function (w) { return '<option value="' + w.num + '">' + w.num + ". " + esc(w.title) + "</option>"; }).join("") + "</select></label>";
+  return '<div class="card ptimer"' + (fixedWeek ? ' data-week="' + fixedWeek + '"' : "") + '><h2>Practice timer</h2><p class="sub t-sub">Today\'s session, block by block</p>' +
+    '<div class="t-pick">' + wsel + '<label>Day <select class="t-day">' + [1, 2, 3, 4, 5, 6].map(function (d) { return '<option value="' + d + '">Day ' + d + " (" + DAY_NAMES[d - 1] + ")</option>"; }).join("") + '<option value="7">Sunday (record)</option></select></label>' +
+    '<div class="seg small" role="group" aria-label="Session length"><button type="button" data-len="60" aria-pressed="true">60 min</button><button type="button" data-len="30" aria-pressed="false">30 min</button></div></div>' +
     '<ol class="blocks"></ol><div class="tclock" aria-live="polite">05:00</div><div class="tnow"></div>' +
     '<div class="trow2"><button type="button" class="btn t-go">Start</button><button type="button" class="btn ghost t-skip">Skip block</button></div>' +
     '<p class="tdone" hidden>Session complete. <button type="button" class="linkbtn t-log">Log this session</button></p></div>';
 }
 function mountTimer(root, onLog) {
-  var full = D.routine.map(function (r) { return { name: r[0], min: r[1], what: r[2] }; });
-  var short = [{ name: "Warm-up", min: 5, what: full[0].what }, { name: "Main focus", min: 15, what: full[3].what }, { name: "Play", min: 10, what: full[4].what }];
-  var plan = full, idx = 0, remain = plan[0].min * 60, on = false, last = 0, iv = null, total = 0;
+  var fixed = +root.getAttribute("data-week") || 0, wsel = $(".t-week", root), dsel = $(".t-day", root);
+  var today = (new Date().getDay() + 6) % 7 + 1;
+  if (wsel) wsel.value = currentWeek();
+  dsel.value = today;
+  var len = 60, P = null, plan = [], idx = 0, remain = 0, on = false, last = 0, iv = null, total = 0;
   var list = $(".blocks", root), clock = $(".tclock", root), now = $(".tnow", root), go = $(".t-go", root);
+  function week() { return fixed || +wsel.value; }
+  function build() {
+    P = dayPlan(week(), +dsel.value, len); plan = P.blocks; idx = 0; remain = plan[0].min * 60; total = 0;
+    if (on) stop(); go.textContent = "Start"; $(".tdone", root).hidden = true;
+    $(".t-sub", root).textContent = "Week " + P.week + ", " + (P.day === 7 ? "Sunday" : "Day " + P.day) + (P.label && P.day !== 7 ? " (from " + P.label.toLowerCase() + ")" : "") + ": " + plan.reduce(function (a, b) { return a + b.min; }, 0) + " minutes";
+    draw();
+  }
   function draw() {
-    list.innerHTML = plan.map(function (b, i) { return '<li class="' + (i < idx ? "past" : i === idx ? "cur" : "") + '"><span>' + esc(b.name) + "</span><span>" + b.min + " min</span></li>"; }).join("");
-    var m = Math.floor(remain / 60), s = Math.floor(remain % 60);
+    list.innerHTML = plan.map(function (b, i) {
+      return '<li class="' + (i < idx ? "past" : i === idx ? "cur" : "") + '"><div class="bh"><span>' + esc(b.name) + "</span><span>" + b.min + ' min</span></div><span class="bwhat">' + esc(b.items[0].task) + "</span></li>";
+    }).join("");
+    var m = Math.floor(Math.max(0, remain) / 60), s = Math.floor(Math.max(0, remain) % 60);
     clock.textContent = pad2(m) + ":" + pad2(s);
-    now.textContent = idx < plan.length ? plan[idx].what : "";
+    var b = plan[Math.min(idx, plan.length - 1)];
+    now.innerHTML = b ? '<div class="tn-head">Now: ' + esc(b.name) + '</div><ul class="tn-items">' + b.items.map(function (it) { return planItemHTML(it, true); }).join("") + "</ul>" : "";
   }
   function tick() {
     var t = Date.now(), dt = (t - last) / 1000; last = t; remain -= dt; total += dt;
     if (remain <= 0) { chime(); idx++; if (idx >= plan.length) { finish(); return; } remain = plan[idx].min * 60; }
     draw();
   }
-  function finish() { stop(); idx = plan.length - 1; remain = 0; draw(); $(".tdone", root).hidden = false; }
+  function finish() { stop(); idx = plan.length - 1; remain = 0; draw(); $(".tdone", root).hidden = false; go.textContent = "Start"; }
   function stop() { on = false; clearInterval(iv); go.textContent = "Resume"; }
   go.addEventListener("click", function () {
     if (on) { stop(); return; }
+    if (!$(".tdone", root).hidden) build();
     audio(); on = true; last = Date.now(); iv = setInterval(tick, 250); go.textContent = "Pause";
   });
   $(".t-skip", root).addEventListener("click", function () { chime(); idx++; if (idx >= plan.length) { finish(); return; } remain = plan[idx].min * 60; draw(); });
   $$("[data-len]", root).forEach(function (b) {
     b.addEventListener("click", function () {
       $$("[data-len]", root).forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
-      plan = b.getAttribute("data-len") === "30" ? short : full; idx = 0; remain = plan[0].min * 60; total = 0; if (on) stop(); go.textContent = "Start"; $(".tdone", root).hidden = true; draw();
+      len = +b.getAttribute("data-len"); build();
     });
   });
-  $(".t-log", root).addEventListener("click", function () { onLog && onLog(Math.max(1, Math.round(total / 60))); });
-  draw();
+  dsel.addEventListener("change", build); if (wsel) wsel.addEventListener("change", build);
+  $(".t-log", root).addEventListener("click", function () { onLog && onLog(Math.max(1, Math.round(total / 60)), week()); });
+  build();
   running.push(function () { if (on) stop(); });
 }
 
@@ -1121,7 +1247,7 @@ function viewWeek(n) {
     '<p class="rate-label">How solid does this week feel?</p><div class="seg small rating" role="group" aria-label="Rate this week">' +
     RATINGS.map(function (r) { return '<button type="button" data-rate="' + r + '" aria-pressed="' + (p.rating === r) + '">' + r + "</button>"; }).join("") + "</div>" +
     '<button type="button" class="btn ghost week-done" aria-pressed="false">Mark week complete</button></div>' +
-    '<div class="rv-slot">' + revisitHTML(n) + "</div>" + timerHTML() + metronomeHTML() +
+    '<div class="rv-slot">' + revisitHTML(n) + "</div>" + timerHTML(n) + metronomeHTML() +
     '<div class="card"><h2>Log a session</h2>' + logFormHTML(n, w.ex) + '<div class="wk-entries"></div><a class="linkbtn" href="#log">See your full log and charts</a></div>' +
     '<div class="clip-slot">' + clipHTML(n) + "</div></aside></div></div>" +
     '<nav class="footnav" aria-label="Previous and next week"><div class="wrap">' +
@@ -1344,7 +1470,7 @@ function viewTools() {
 function viewTimer() {
   $("#app").innerHTML = '<div class="wrap pagehead"><div class="eyebrow">Practice tools</div><h1>Practice timer</h1></div><div class="wrap"><div class="two">' + timerHTML() + metronomeHTML() + "</div></div>";
   var app = $("#app"); mountMetronome($(".met", app));
-  mountTimer($(".ptimer", app), function (mins) { var cur = currentWeek(); addLog({ date: todayStr(), week: cur, minutes: mins, exercise: "Full practice session", bpm: null, note: "" }); $(".tdone", app).textContent = "Logged " + mins + " min against Week " + cur + "."; });
+  mountTimer($(".ptimer", app), function (mins, wk) { var cur = wk || currentWeek(); addLog({ date: todayStr(), week: cur, minutes: mins, exercise: "Full practice session", bpm: null, note: "" }); $(".tdone", app).textContent = "Logged " + mins + " min against Week " + cur + "."; });
 }
 function viewDrone() {
   $("#app").innerHTML = '<div class="wrap pagehead"><div class="eyebrow">Practice tools</div><h1>Drone</h1><p class="lede">Hold a root note while you play a mode over it. Every mode sounds different against the same drone; that difference is what you are learning to hear.</p></div><div class="wrap"><div class="two">' + droneHTML("A") + metronomeHTML() + "</div></div>";
