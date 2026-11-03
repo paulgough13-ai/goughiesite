@@ -760,3 +760,11 @@ a.t-v { color: var(--accent); font-size: 20px; text-decoration: none; }
     border:2.5px solid var(--accent);border-radius:9px;
     background:rgba(215,164,74,.06);pointer-events:none;z-index:4;
   }
+
+/* scale-degree colours on every diagram (the Scales tool palette) */
+.dot.dg circle { fill: var(--dc); stroke: rgba(255, 255, 255, .35); stroke-width: 1.5; }
+.dot.dg text { fill: #13100b; }
+.dot.dg.root circle { stroke: #fff; stroke-width: 2; }
+.dot.dg.root text { fill: #13100b; }
+.dot.hl circle { stroke: var(--accent); stroke-width: 2.6; }
+.dot.dg:hover circle, .dot.dg:focus-visible circle { stroke: var(--ink); stroke-width: 2.4; }

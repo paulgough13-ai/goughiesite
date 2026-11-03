@@ -192,6 +192,15 @@ function boardDefs(svg, id) {
   sv("feComposite", { in: "grain", in2: "SourceAlpha", operator: "in" }, f);
 }
 
+/* scale-degree colours, as on the Scales tool: root red, 2 orange, 3 yellow, 4 green, 5 blue, 6 purple, 7 pink.
+   The degree comes from the interval label, so #4 is a 4th, b5 a 5th and b9 a 2nd. */
+var DEG_VAR = ["--d-root", "--d-2", "--d-3", "--d-4", "--d-5", "--d-6", "--d-7"];
+function degreeIndex(iv, spec) {
+  if (iv === null || iv === undefined) return -1;
+  var lab = (spec.deg && spec.deg[iv]) || DEG[iv], m = /(\d+)/.exec(lab || "");
+  return m ? (+m[1] - 1) % 7 : -1;
+}
+
 /* draw a fretboard into holder; returns the expanded notes */
 function drawBoard(holder, spec, opts) {
   opts = opts || {};
@@ -244,8 +253,10 @@ function drawBoard(holder, spec, opts) {
   (spec.muted || []).forEach(function (s) { var m = sv("text", { x: X(25), y: yOf(s) + 5, class: "muted" }, svg); m.textContent = "×"; });
   var mode = opts.mode || "note";
   x.notes.forEach(function (n) {
-    var g = sv("g", { class: "dot" + (n.iv === 0 && mode !== "quiz" ? " root" : n.hl ? " hl" : "") + (n.f === 0 ? " open" : ""),
+    var dg = mode === "quiz" ? -1 : degreeIndex(n.iv, spec);
+    var g = sv("g", { class: "dot" + (n.iv === 0 && mode !== "quiz" ? " root" : "") + (n.hl ? " hl" : "") + (dg >= 0 ? " dg" : "") + (n.f === 0 ? " open" : ""),
       tabindex: "0", role: "button", "aria-label": (mode === "quiz" ? "Mystery note" : n.name) + ", string " + n.s + ", fret " + n.f }, svg);
+    if (dg >= 0) g.style.setProperty("--dc", "var(" + DEG_VAR[dg] + ")");
     sv("circle", { cx: xOf(n.f), cy: yOf(n.s), r: 11 }, g);
     var lab = labelFor(n, spec, mode);
     var tx = sv("text", { x: xOf(n.f), y: yOf(n.s) + 3.5, class: lab.length > 2 ? "small" : "" }, g);
