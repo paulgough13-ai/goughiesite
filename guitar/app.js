@@ -629,12 +629,98 @@ function mountDrone(root) {
 
 /* ===== backing tracks ===== */
 var band = { stop: null };
+
+/* Recorded instruments. Guitar and bass: FluidR3 GM soundfont (Frank Wen, CC BY 3.0).
+   Drums: Big Rusty Drums (Karoryfer Samples, CC0). Anything not yet loaded falls back to the synth voices. */
+var SMP = { buf: {}, wait: {}, rr: {}, bus: null };
+var BAND_KIT = {
+  rock: { gtr: "clean", bass: "bass", drums: ["kick", "snare", "hat"] },
+  ballad: { gtr: "acoustic", bass: "bass", drums: ["kick", "rim", "hat"] },
+  shuffle: { gtr: "clean", bass: "bass", drums: ["kick", "snare", "hat"] },
+  swing: { gtr: "jazz", bass: "upright", drums: ["kick", "ride", "hat"] }
+};
+var DRUM_LAYERS = { kick: 2, snare: 2, rim: 1, hat: 2, ride: 2 };
+var DRUM_GAIN = { kick: 0.95, snare: 1.25, rim: 0.9, hat: 0.42, ride: 0.36 };
+var GTR_RANGE = [40, 81], BASS_RANGE = [27, 48], SMP_GAIN = 7.5;
+function smpLoad(key) {
+  if (SMP.buf[key]) return Promise.resolve(SMP.buf[key]);
+  if (!SMP.wait[key]) {
+    SMP.wait[key] = fetch("samples/" + key + ".mp3").then(function (r) {
+      if (!r.ok) throw new Error("missing");
+      return r.arrayBuffer();
+    }).then(function (a) {
+      return new Promise(function (res, rej) { ctx.decodeAudioData(a, res, rej); });
+    }).then(function (b) { SMP.buf[key] = b; return b; }, function () { delete SMP.wait[key]; return null; });
+  }
+  return SMP.wait[key];
+}
+function bandBus() {
+  if (SMP.bus) return SMP.bus;
+  var dry = ctx.createGain(), send = ctx.createGain(), verb = ctx.createConvolver(), wet = ctx.createGain();
+  var sr = ctx.sampleRate, len = Math.floor(sr * 1.1), ir = ctx.createBuffer(2, len, sr);
+  for (var ch = 0; ch < 2; ch++) {
+    var d = ir.getChannelData(ch), lp = 0;
+    for (var i = 0; i < len; i++) { lp += 0.35 * ((Math.random() * 2 - 1) - lp); d[i] = lp * Math.pow(1 - i / len, 3.2); }
+  }
+  verb.buffer = ir; wet.gain.value = 0.22; dry.gain.value = 1;
+  dry.connect(master); dry.connect(send); send.connect(verb); verb.connect(wet); wet.connect(master);
+  SMP.bus = dry; return dry;
+}
+function smpPlay(inst, midi, t, gain, dur) {
+  var rg = inst === "bass" || inst === "upright" ? BASS_RANGE : GTR_RANGE;
+  var m = Math.max(rg[0], Math.min(rg[1], midi)), b = SMP.buf[inst + "/" + m], off = 0;
+  for (var k = 1; !b && k <= 3; k++) {
+    if (SMP.buf[inst + "/" + (m - k)]) { b = SMP.buf[inst + "/" + (m - k)]; off = k; }
+    else if (SMP.buf[inst + "/" + (m + k)]) { b = SMP.buf[inst + "/" + (m + k)]; off = -k; }
+  }
+  if (!SMP.buf[inst + "/" + m]) smpLoad(inst + "/" + m);
+  if (!b) return false;
+  var src = ctx.createBufferSource(), g = ctx.createGain(), lv = gain * SMP_GAIN;
+  src.buffer = b; src.playbackRate.value = Math.pow(2, (midi - m + off) / 12);
+  g.gain.setValueAtTime(lv, t);
+  if (dur) { g.gain.setValueAtTime(lv, t + dur); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.12); }
+  src.connect(g); g.connect(bandBus()); src.start(t);
+  src.stop(t + Math.min(b.duration / src.playbackRate.value, dur ? dur + 0.15 : 30));
+  return true;
+}
+function drumSmp(kind, t, vel) {
+  var layers = DRUM_LAYERS[kind]; if (!layers) return false;
+  var L = layers > 1 && vel >= 0.8 ? 2 : 1, rr = SMP.rr[kind] = (SMP.rr[kind] || 0) % 2 + 1;
+  var b = SMP.buf["drums/" + kind + L + "_" + rr] || SMP.buf["drums/" + kind + L + "_1"];
+  if (!b) return false;
+  var src = ctx.createBufferSource(), g = ctx.createGain();
+  src.buffer = b; src.playbackRate.value = 1 + (Math.random() - 0.5) * 0.012;
+  g.gain.value = DRUM_GAIN[kind] * (L === 2 ? 0.8 + 0.2 * vel : 0.65 + 0.5 * vel);
+  src.connect(g); g.connect(bandBus()); src.start(t);
+  return true;
+}
+function gtrVoicing(ch) {
+  var r = ch.bass, iv = ch.iv.filter(function (i) { return i !== 0; }).sort(function (a, b) { return a - b; });
+  var fifth = [7, 6, 8].filter(function (f) { return ch.iv.indexOf(f) > -1; })[0];
+  var low = [r], upper = [r + 12];
+  if (fifth) low.push(r + fifth);
+  iv.forEach(function (i) { var n = r + 12 + i; if (upper.indexOf(n) < 0) upper.push(n); });
+  var notes = low.concat(upper);
+  if (notes.length < 6 && iv.length <= 2) notes.push(r + 24);
+  while (notes.length > 6) notes.splice(notes.indexOf(r + 12), 1);
+  return notes.filter(function (n) { return n <= GTR_RANGE[1]; }).sort(function (a, b) { return a - b; });
+}
+function bandKeys(preset, shift, kit) {
+  var keys = {}, i;
+  parseBars(preset.bars).forEach(function (bar) {
+    bar.forEach(function (x) { if (x.c) gtrVoicing(chordTones(x.c, shift)).forEach(function (n) { keys[kit.gtr + "/" + n] = 1; }); });
+  });
+  for (i = BASS_RANGE[0]; i <= BASS_RANGE[1]; i++) keys[kit.bass + "/" + i] = 1;
+  kit.drums.forEach(function (d) { for (var l = 1; l <= DRUM_LAYERS[d]; l++) { keys["drums/" + d + l + "_1"] = 1; keys["drums/" + d + l + "_2"] = 1; } });
+  return Object.keys(keys);
+}
 function chordTones(c, shift) {
   var pc = (c.root + shift + 120) % 12, base = 52 + ((pc - 4 + 12) % 12);
   return { bass: 40 + ((pc - 4 + 12) % 12), tones: c.iv.map(function (i) { return base + i; }), pc: pc, iv: c.iv };
 }
 function drum(kind, t, vel) {
   vel = vel == null ? 1 : vel;
+  if (drumSmp(kind, t, vel)) return;
   if (kind === "kick") {
     var o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
     g.gain.setValueAtTime(0.9 * vel, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3); o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.32); return;
@@ -648,9 +734,14 @@ function drum(kind, t, vel) {
   src.connect(f); f.connect(g2); g2.connect(master); src.start(t); src.stop(t + dur + 0.02);
   if (kind === "snare") { var tn = ctx.createOscillator(), tg = ctx.createGain(); tn.type = "triangle"; tn.frequency.value = 190; tg.gain.setValueAtTime(0.25 * vel, t); tg.gain.exponentialRampToValueAtTime(0.001, t + 0.08); tn.connect(tg); tg.connect(master); tn.start(t); tn.stop(t + 0.1); }
 }
-function strum(ch, t, gain, dur, down) {
-  var tones = ch.tones.slice(); if (down === false) tones.reverse();
-  tones.forEach(function (m, i) { pluck(m, t + i * 0.012, gain, dur); });
+function strum(ch, t, gain, dur, down, inst) {
+  var tones = ch.voice ? ch.voice.slice() : ch.tones.slice();
+  if (down === false) { tones = tones.slice(-4).reverse(); gain *= 0.8; }
+  var gap = 0.007 + Math.random() * 0.006;
+  tones.forEach(function (m, i) {
+    var g = gain * (0.85 + Math.random() * 0.3) * (down === false && i > 0 ? 0.9 : 1);
+    if (!inst || !smpPlay(inst, m, t + i * gap, g, dur)) pluck(m, t + i * 0.012, gain, dur);
+  });
 }
 function parseBars(bars) {
   return bars.map(function (b) {
@@ -662,43 +753,58 @@ function chordAt(bar, beat) { var acc = 0; for (var i = 0; i < bar.length; i++) 
 
 function startBand(preset, ui) {
   stopBand(); if (!audio()) return;
+  var kit = BAND_KIT[preset.style] || BAND_KIT.rock, cancelled = false;
+  band.stop = function () { cancelled = true; band.stop = null; ui.mark(-1); ui.stopped(); };
+  running.push(function () { if (band.stop) band.stop(); });
+  if (ui.loading) ui.loading(true);
+  var keys = bandKeys(preset, ui.shift(), kit);
+  Promise.race([Promise.all(keys.map(smpLoad)), new Promise(function (r) { setTimeout(r, 8000); })]).then(function () {
+    if (cancelled) return;
+    band.stop = null; if (ui.loading) ui.loading(false);
+    runBand(preset, ui, kit);
+  });
+}
+function runBand(preset, ui, kit) {
   var bars = parseBars(preset.bars), swing = preset.style === "swing" || preset.style === "shuffle", spb = swing ? 3 : 4;
   var barI = 0, step = 0, next = ctx.currentTime + 0.08, on = true;
   function stepDur() { return 60 / ui.bpm() / spb; }
+  function bassNote(m, t, g, d) { if (!smpPlay(kit.bass, m - 12, t, g * 1.1, d)) pluck(m, t, g, d); }
   function play(t) {
     var bar = bars[barI], beat = Math.floor(step / spb), sub = step % spb, cur = chordAt(bar, beat), shift = ui.shift();
     if (!cur.c) return;
     var ch = chordTones(cur.c, shift), st = preset.style, ivs = cur.c.iv;
+    ch.voice = gtrVoicing(ch);
+    t += (Math.random() - 0.5) * 0.008;
     var third = ivs.indexOf(3) > -1 ? 3 : 4, fifth = ivs.indexOf(6) > -1 && ivs.indexOf(7) < 0 ? 6 : 7;
     if (st === "rock") {
       if (sub === 0 && (beat === 0 || beat === 2)) drum("kick", t);
       if (sub === 2 && beat === 2) drum("kick", t, 0.6);
       if (sub === 0 && (beat === 1 || beat === 3)) drum("snare", t);
       if (sub % 2 === 0) drum("hat", t, sub === 0 ? 1 : 0.6);
-      if (sub === 0 && (beat === 0 || beat === 2)) strum(ch, t, 0.12, 0.9);
-      if (sub === 2 && (beat === 1 || beat === 3)) strum(ch, t, 0.08, 0.3, false);
-      if (sub === 0 || sub === 2) pluck(ch.bass + (sub === 2 && beat === 3 ? fifth : 0), t, 0.42, 0.22);
+      if (sub === 0 && (beat === 0 || beat === 2)) strum(ch, t, 0.12, 0.9, true, kit.gtr);
+      if (sub === 2 && (beat === 1 || beat === 3)) strum(ch, t, 0.08, 0.3, false, kit.gtr);
+      if (sub === 0 || sub === 2) bassNote(ch.bass + (sub === 2 && beat === 3 ? fifth : 0), t, 0.42, 0.22);
     } else if (st === "ballad") {
       if (sub === 0 && beat === 0) drum("kick", t, 0.8);
       if (sub === 0 && beat === 2) drum("rim", t);
       if (sub === 0) drum("hat", t, 0.7);
-      if (sub === 0 && beat === 0) strum(ch, t, 0.13, 3.2);
-      if (sub === 0 && beat === 2) strum(ch, t, 0.07, 1.4);
-      if (sub === 0 && (beat === 0 || beat === 2)) pluck(ch.bass + (beat === 2 ? fifth : 0), t, 0.42, 1.2);
+      if (sub === 0 && beat === 0) strum(ch, t, 0.13, 3.2, true, kit.gtr);
+      if (sub === 0 && beat === 2) strum(ch, t, 0.07, 1.4, true, kit.gtr);
+      if (sub === 0 && (beat === 0 || beat === 2)) bassNote(ch.bass + (beat === 2 ? fifth : 0), t, 0.42, 1.2);
     } else if (st === "shuffle") {
       if (sub === 0 || sub === 2) drum("hat", t, sub === 0 ? 1 : 0.55);
       if (sub === 0 && (beat === 0 || beat === 2)) drum("kick", t);
       if (sub === 0 && (beat === 1 || beat === 3)) drum("snare", t, 0.9);
       if (sub === 0 || sub === 2) {
         var walk = [0, third === 3 ? 3 : 4, 7, 9][beat];
-        pluck(ch.bass + walk, t, sub === 0 ? 0.42 : 0.3, 0.18);
-        strum({ tones: ch.tones.slice(0, 3) }, t, sub === 0 ? 0.08 : 0.05, 0.14);
+        bassNote(ch.bass + walk, t, sub === 0 ? 0.42 : 0.3, 0.18);
+        strum({ voice: ch.voice.slice(0, 3) }, t, sub === 0 ? 0.08 : 0.05, 0.14, true, kit.gtr);
       }
     } else if (st === "swing") {
       if (sub === 0 || (sub === 2 && (beat === 1 || beat === 3))) drum("ride", t, sub === 0 ? 1 : 0.7);
       if (sub === 0 && (beat === 1 || beat === 3)) drum("hat", t, 0.8);
       if (sub === 0 && beat === 0) drum("kick", t, 0.35);
-      if ((beat === 0 && sub === 0) || (beat === 1 && sub === 2)) strum(ch, t, 0.09, 0.32);
+      if ((beat === 0 && sub === 0) || (beat === 1 && sub === 2)) strum(ch, t, 0.09, 0.32, true, kit.gtr);
       if (sub === 0) {
         var nb = beat === 3 ? (function () {
           var nbar = bars[(barI + 1) % bars.length], nx = nbar[0].c || cur.c;
@@ -709,7 +815,7 @@ function startBand(preset, ui) {
         var note = beat === 0 ? ch.bass : nb !== null ? nb : ch.bass + (beat === 1 ? third : fifth);
         if (beat === 2 && nb === null) note = ch.bass + fifth;
         if (nb === null && cur.beats === 2 && beat % 2 === 1) note = ch.bass + fifth;
-        pluck(note, t, 0.45, 0.4);
+        bassNote(note, t, 0.45, 0.4);
       }
     }
   }
@@ -751,12 +857,13 @@ function mountBand(card) {
   key.addEventListener("change", relabel);
   go.addEventListener("click", function () {
     if (go.getAttribute("aria-pressed") === "true") { stopBand(); return; }
+    go.textContent = "Stop"; go.setAttribute("aria-pressed", "true");
     startBand(p, {
       bpm: function () { return +bpm.value; }, shift: function () { return +key.value; },
+      loading: function (on) { if (go.getAttribute("aria-pressed") === "true") go.textContent = on ? "Loading sounds\u2026" : "Stop"; },
       mark: function (i) { chips.forEach(function (c, k) { c.classList.toggle("on", k === i); }); },
       stopped: function () { go.textContent = "Play along"; go.setAttribute("aria-pressed", "false"); }
     });
-    go.textContent = "Stop"; go.setAttribute("aria-pressed", "true");
   });
 }
 /* ===== coach (Claude in the page) ===== */
@@ -1200,10 +1307,11 @@ function viewBacking() {
     ["Mode vamps", ["a-ionian", "a-dorian", "a-phryg", "a-lydian", "a-mixo", "a-aeol", "d7-vamp"]],
     ["Blues", ["blues-a", "blues-c", "minor-blues", "jazz-blues"]],
     ["Jazz and harmony", ["ii-v-i-vi", "dm-g7", "autumn", "key-change", "e7-am", "minor-prog", "e7alt-am", "minor-ii-v-i", "borrow-iv", "borrow-bvi"]]];
-  $("#app").innerHTML = '<div class="wrap pagehead"><div class="eyebrow">Practice tools</div><h1>Backing tracks</h1><p class="lede">Drums, bass and chords generated in your browser. Pick a track, set the tempo and key, and play over it.</p></div>' +
+  $("#app").innerHTML = '<div class="wrap pagehead"><div class="eyebrow">Practice tools</div><h1>Backing tracks</h1><p class="lede">Recorded drums, bass and guitar. Pick a track, set the tempo and key, and play over it.</p></div>' +
     '<div class="wrap"><section class="card custom"><h2>Build your own</h2><p class="sub">One chord per bar, separated by spaces. Join two chords in one bar with a plus, for example <code>Am7 D7 Gmaj7 Cmaj7+F#m7b5</code>.</p>' +
     '<div class="cu-row"><input type="text" class="cu-in" value="Am7 D7 Gmaj7 Cmaj7" aria-label="Chord progression"><select class="cu-style" aria-label="Style"><option value="rock">Rock</option><option value="ballad">Ballad</option><option value="shuffle">Shuffle</option><option value="swing">Swing</option></select><button type="button" class="btn auto cu-make">Make track</button></div><p class="cu-msg sub" aria-live="polite"></p><div class="cu-slot"></div></section>' +
-    groups.map(function (g) { return '<section class="btgroup"><h2 class="grouphead">' + esc(g[0]) + '</h2><div class="bands">' + g[1].map(bandHTML).join("") + "</div></section>"; }).join("") + "</div>";
+    groups.map(function (g) { return '<section class="btgroup"><h2 class="grouphead">' + esc(g[0]) + '</h2><div class="bands">' + g[1].map(bandHTML).join("") + "</div></section>"; }).join("") +
+    '<p class="sub credits">Guitar and bass samples from the FluidR3 GM soundfont by Frank Wen (CC BY 3.0). Drums from Big Rusty Drums by Karoryfer Samples (CC0).</p></div>';
   var app = $("#app"); $$(".bands .band", app).forEach(mountBand);
   $(".cu-make", app).addEventListener("click", function () {
     var raw = $(".cu-in", app).value.trim().split(/\s+/).filter(Boolean), bad = [];
