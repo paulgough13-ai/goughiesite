@@ -868,3 +868,16 @@ a.t-v { color: var(--accent); font-size: 20px; text-decoration: none; }
 .sess-bt .band { margin-bottom: 10px; }
 .s-logged { margin-top: 8px; }
 .sess .eyebrow { font-family: var(--f-display); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 600; font-size: 14px; }
+
+/* session page: lesson details under Main focus */
+.sess-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; min-width: 0; }
+.sess-lesson .board-svg, .sess-lesson .tab-scroll, .sess-lesson pre { max-width: 100%; }
+.sess-lesson .sl-goal { margin: 6px 0 12px; font-size: 15px; }
+.sess-lesson .sl-goal b { font: 600 13px var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-right: 6px; }
+.sl-sec { border-top: 1px solid var(--line); padding: 8px 0; }
+.sl-sec > summary { cursor: pointer; font: 700 17px var(--f-display); text-transform: uppercase; letter-spacing: .04em; padding: 4px 0; }
+.sl-sec > summary:hover { color: var(--accent); }
+.sl-body { padding: 4px 0 6px; max-width: none; }
+.sl-body .sl-today { border-left: 3px solid var(--accent); padding-left: 10px; margin-left: -13px; }
+.sl-tag { font: 600 11px var(--f-display); letter-spacing: .08em; text-transform: uppercase; background: var(--accent); color: var(--accent-ink); padding: 1px 6px; border-radius: 3px; vertical-align: 2px; }
+.sl-boards .board-grid { margin-top: 8px; }

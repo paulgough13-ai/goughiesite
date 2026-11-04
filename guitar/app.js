@@ -613,6 +613,13 @@ function weekExercises(w) {
     var st = el.querySelector("strong"); if (!st) return;
     var name = st.textContent.replace(/^\s*\d+\.\s*/, "").replace(/\.\s*$/, "").trim();
     var text = el.textContent.replace(st.textContent, "").trim();
+    if (!text) {
+      /* instructions can follow the heading as tab and a notes paragraph */
+      for (var sib = el.nextElementSibling; sib && !sib.querySelector("strong"); sib = sib.nextElementSibling) {
+        text += sib.tagName === "PRE" ? " (Tab in the lesson.) " : " " + sib.textContent.trim();
+      }
+      text = text.replace(/\s+/g, " ").trim();
+    }
     if (name && text) out.push({ name: name, text: text, words: stemWords(name.replace(/\([^)]*\)/g, "")) });
   });
   return out;
@@ -684,7 +691,7 @@ function dayPlan(n, day, len) {
   var techItems = tech ? [item(tech)] : [], theoryItems = theory ? [item(theory)] : [], mainItems = rest.map(item), playItems = play.map(item);
   var sp;
   if (!techItems.length) techItems.push((sp = spareEx()) ? exItem(sp) : { task: "Your current speed exercise with the metronome, 5 BPM below your limit", ex: null, last: null });
-  if (!mainItems.length) { if ((sp = spareEx())) mainItems.push(exItem(sp)); else if (tech) mainItems.push({ task: "Build on the technique block: " + tech.replace(/\.$/, "") + ", now aiming at this week's goal", ex: null, last: null }); }
+  if (!mainItems.length) { if ((sp = spareEx())) mainItems.push(exItem(sp)); else if (tech) mainItems.push({ task: "Take today's technique work further: " + tech.replace(/\.$/, "") + ". Use the lesson notes below and push towards this week's goal", ex: matchExercise(tech, exs), last: null }); }
   if ((sp = spareEx())) mainItems.push(exItem(sp));
   if (!theoryItems.length) theoryItems.push({ task: (boardNames.length ? "Name every note in this week's diagrams out loud (" + boardNames.slice(0, 3).join(", ") + (boardNames.length > 3 ? " and " + (boardNames.length - 3) + " more" : "") + ")" : "Name the notes on the strings this week uses") + ", then a 20 note round of the fretboard quiz", ex: null, last: null, link: ["#fretboard-quiz", "Open the fretboard quiz"] });
   if (day === 6) theoryItems.unshift({ task: (wk(n).exam && wk(n).exam.passed) ? "Theory exam passed. Retake it for a higher score if you like" : "Take this week's theory exam (pass mark " + EXAM_PASS + " of " + EXAM_LEN + ")", ex: null, last: null, link: ["#exam-" + n, "Open the exam"] });
@@ -697,7 +704,7 @@ function dayPlan(n, day, len) {
   var playB = { name: "Play", min: 10, items: playItems };
   var w0 = warm(firstDay);
   if (len === 30) {
-    plan = [w0, { name: "Main focus", min: 15, items: techB.items.concat(mainItems.filter(function (x) { return !/^Build on the technique/.test(x.task); })) }, playB];
+    plan = [w0, { name: "Main focus", min: 15, items: techB.items.concat(mainItems.filter(function (x) { return !/^Take today's technique work further/.test(x.task); })) }, playB];
   } else plan = [w0, techB, theoryB, mainB, playB];
   return { week: n, day: day, label: grp ? grp.label : "", blocks: plan };
 }
@@ -760,13 +767,33 @@ function viewSession(n, day, len) {
     '<label class="opt sess-auto"><input type="checkbox" class="s-auto"' + (st.auto ? " checked" : "") + "> Move on automatically</label></div>" +
     '<div class="wrap"><div class="sess-overall"><div class="so-bar"><span></span></div><span class="so-txt mono"></span></div>' +
     '<ol class="sess-steps">' + plan.map(function (b, i) { return '<li><button type="button" data-i="' + i + '"><span class="ss-n">' + (i + 1) + '</span><span class="ss-name">' + esc(b.name) + '</span><span class="ss-min">' + b.min + " min</span></button></li>"; }).join("") + "</ol>" +
-    '<div class="sess-grid"><section class="card sess-now" aria-live="polite"></section><aside class="sess-side">' +
+    '<div class="sess-grid"><div class="sess-main"><section class="card sess-now" aria-live="polite"></section><section class="card sess-lesson" hidden></section></div><aside class="sess-side">' +
     '<div class="card sess-next"></div>' + metronomeHTML() +
     ((w.bt || []).length ? '<div class="sess-bt" hidden><h2 class="minihead">Backing tracks for this week</h2>' + w.bt.map(bandHTML).join("") + "</div>" : "") +
     "</aside></div></div></div>";
   var app = $("#app"), now = $(".sess-now", app), nextC = $(".sess-next", app), met = mountMetronome($(".met", app));
   $$(".band", app).forEach(mountBand);
-  var on = false, iv = null, last = 0, lock = null, metSetFor = -1;
+  var on = false, iv = null, last = 0, lock = null, metSetFor = -1, lessonFor = -1;
+  var todayEx = {}; plan.forEach(function (bk) { bk.items.forEach(function (it) { if (it.ex) todayEx[it.ex.name] = 1; }); });
+  function drawLesson(b) {
+    var box = $(".sess-lesson", app), show = /^Main focus$/.test(b.name) && !st.finished;
+    box.hidden = !show; if (!show) { lessonFor = -1; return; }
+    if (lessonFor === st.idx) return; lessonFor = st.idx;
+    box.innerHTML = '<h2 class="minihead">From the lesson</h2><p class="sub">Week ' + n + ": " + esc(w.title) + ". Today's exercises are highlighted.</p>" +
+      '<div class="sl-goal"><b>Objective</b> ' + w.obj + "</div>" +
+      w.lesson.map(function (sec) {
+        var open = /exercise|key concept/i.test(sec[0]) ? " open" : "";
+        return '<details class="sl-sec"' + open + "><summary>" + esc(sec[0]) + '</summary><div class="lesson sl-body">' + sec[1] + "</div></details>";
+      }).join("") +
+      ((w.boards || []).length ? '<details class="sl-sec sl-boards"><summary>Diagrams (' + w.boards.length + ')</summary><div class="board-grid">' + boardsHTML(w.boards) + "</div></details>" : "");
+    $$(".sl-body p, .sl-body li", box).forEach(function (el) {
+      var stg = el.querySelector("strong"); if (!stg) return;
+      var nm = stg.textContent.replace(/^\s*\d+\.\s*/, "").replace(/\.\s*$/, "").trim();
+      if (todayEx[nm]) { el.classList.add("sl-today"); stg.insertAdjacentHTML("afterend", ' <span class="sl-tag">Today</span>'); }
+    });
+    mountTabs(box);
+    var bd = $(".sl-boards", box); if (bd) mountBoards(bd, w.boards);
+  }
 
   function fmt(sec) { sec = Math.max(0, Math.ceil(sec)); return pad2(Math.floor(sec / 60)) + ":" + pad2(sec % 60); }
   function wake(onoff) {
@@ -786,6 +813,7 @@ function viewSession(n, day, len) {
       '<div class="sn-ctl"><button type="button" class="btn s-go">' + (on ? "Pause" : st.spent > 0 || resumed ? "Resume" : "Start") + '</button><button type="button" class="btn ghost s-prev"' + (st.idx === 0 ? " disabled" : "") + '>Previous</button><button type="button" class="btn ghost s-next">' + (nb ? "Next block" : "Finish") + '</button><button type="button" class="btn ghost s-plus">+1 min</button></div>' +
       '<h3 class="minihead">What to do</h3><ul class="tn-items sn-items">' + b.items.map(function (it) { return planItemHTML(it, true); }).join("") + "</ul>" +
       (bp ? '<p class="sn-tip">Metronome set to ' + bp.bpm + " BPM, " + esc(bp.why) + ".</p>" : "");
+    drawLesson(b);
     nextC.innerHTML = nb ? '<h2 class="minihead">Up next</h2><p class="sx-name">' + esc(nb.name) + " &middot; " + nb.min + ' min</p><p class="sx-what">' + esc(nb.items[0].task) + "</p>" : '<h2 class="minihead">Last block</h2><p class="sx-what">When this block ends you can log the session.</p>';
     var btWrap = $(".sess-bt", app); if (btWrap) btWrap.hidden = !/^(Play|Rehearse|Record)$/.test(b.name);
     $$(".sess-steps li", app).forEach(function (li, i) { li.className = i < st.idx ? "past" : i === st.idx ? "cur" : ""; });
@@ -796,6 +824,7 @@ function viewSession(n, day, len) {
     bind();
   }
   function drawDone() {
+    drawLesson({ name: "" });
     var mins = Math.max(1, Math.round(st.spent / 60));
     now.innerHTML = '<div class="sn-head"><span class="eyebrow">Session complete</span><h2>Nice work</h2></div><p>You practised for ' + mins + " minutes across " + plan.length + " blocks.</p>" +
       '<div class="sn-ctl"><button type="button" class="btn s-log">Log ' + mins + ' minutes</button><a class="btn ghost" href="' + weekHref(n) + '">Back to Week ' + n + "</a>" + (day < 7 ? '<a class="btn ghost" href="#exam-' + n + '">Theory exam</a>' : "") + "</div><p class=\"s-logged sub\" aria-live=\"polite\"></p>";
