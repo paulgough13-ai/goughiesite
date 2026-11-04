@@ -881,3 +881,9 @@ a.t-v { color: var(--accent); font-size: 20px; text-decoration: none; }
 .sl-body .sl-today { border-left: 3px solid var(--accent); padding-left: 10px; margin-left: -13px; }
 .sl-tag { font: 600 11px var(--f-display); letter-spacing: .08em; text-transform: uppercase; background: var(--accent); color: var(--accent-ink); padding: 1px 6px; border-radius: 3px; vertical-align: 2px; }
 .sl-boards .board-grid { margin-top: 8px; }
+
+/* session page: the metronome floats in the middle of the window while you scroll */
+@media (min-width: 861px) {
+  .sess-side { align-self: stretch; align-content: start; }
+  .sess-side .met { position: sticky; z-index: 2; box-shadow: 0 10px 30px rgba(0, 0, 0, .45); }
+}

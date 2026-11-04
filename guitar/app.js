@@ -768,10 +768,14 @@ function viewSession(n, day, len) {
     '<div class="wrap"><div class="sess-overall"><div class="so-bar"><span></span></div><span class="so-txt mono"></span></div>' +
     '<ol class="sess-steps">' + plan.map(function (b, i) { return '<li><button type="button" data-i="' + i + '"><span class="ss-n">' + (i + 1) + '</span><span class="ss-name">' + esc(b.name) + '</span><span class="ss-min">' + b.min + " min</span></button></li>"; }).join("") + "</ol>" +
     '<div class="sess-grid"><div class="sess-main"><section class="card sess-now" aria-live="polite"></section><section class="card sess-lesson" hidden></section></div><aside class="sess-side">' +
-    '<div class="card sess-next"></div>' + metronomeHTML() +
+    '<div class="card sess-next"></div>' +
     ((w.bt || []).length ? '<div class="sess-bt" hidden><h2 class="minihead">Backing tracks for this week</h2>' + w.bt.map(bandHTML).join("") + "</div>" : "") +
-    "</aside></div></div></div>";
+    metronomeHTML() + "</aside></div></div></div>";
   var app = $("#app"), now = $(".sess-now", app), nextC = $(".sess-next", app), met = mountMetronome($(".met", app));
+  var metEl = $(".sess-side .met", app);
+  function centreMet() { if (metEl.isConnected) metEl.style.top = Math.max(16, Math.round((window.innerHeight - metEl.offsetHeight) / 2)) + "px"; }
+  window.addEventListener("resize", centreMet); centreMet();
+  if (window.ResizeObserver) new ResizeObserver(centreMet).observe(metEl);
   $$(".band", app).forEach(mountBand);
   var on = false, iv = null, last = 0, lock = null, metSetFor = -1, lessonFor = -1;
   var todayEx = {}; plan.forEach(function (bk) { bk.items.forEach(function (it) { if (it.ex) todayEx[it.ex.name] = 1; }); });
@@ -878,7 +882,7 @@ function viewSession(n, day, len) {
   });
   function onVis() { if (document.visibilityState === "visible" && on) wake(true); }
   document.addEventListener("visibilitychange", onVis);
-  running.push(function () { on = false; clearInterval(iv); wake(false); sessionSave(st); document.removeEventListener("visibilitychange", onVis); document.title = BASE_TITLE; VIEW.noRerender = false; });
+  running.push(function () { on = false; clearInterval(iv); wake(false); sessionSave(st); document.removeEventListener("visibilitychange", onVis); window.removeEventListener("resize", centreMet); document.title = BASE_TITLE; VIEW.noRerender = false; });
   sessionSave(st); draw();
 }
 
