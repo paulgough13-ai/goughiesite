@@ -673,7 +673,7 @@ function dayPlan(n, day, len) {
     plan = [warm(),
       { name: "Rehearse", min: 10, items: [{ task: "Run through the Sunday task a few times until it feels settled: " + stripHtml(w.sunday), ex: null, last: null }] },
       { name: "Record", min: 5, items: [{ task: "Record a 2 to 3 minute clip of it. Keep both hands in shot, then upload it on this week's page and rest.", ex: null, last: null }] }];
-    return { week: n, day: day, label: "Sunday: record your progress clip", blocks: plan };
+    return { week: n, day: day, label: "Sunday: record your progress clip", blocks: assignTimes(plan) };
   }
   var groups = dayGroups(w), grp = groups.filter(function (g) { return day >= g.from && day <= g.to; })[0] || groups[groups.length - 1];
   var gi = Math.max(0, groups.indexOf(grp)), per = exs.length / Math.max(1, groups.length);
@@ -693,6 +693,7 @@ function dayPlan(n, day, len) {
   if (!techItems.length) techItems.push((sp = spareEx()) ? exItem(sp) : { task: "Your current speed exercise with the metronome, 5 BPM below your limit", ex: null, last: null });
   if (!mainItems.length) { if ((sp = spareEx())) mainItems.push(exItem(sp)); else if (tech) mainItems.push({ task: "Take today's technique work further: " + tech.replace(/\.$/, "") + ". Use the lesson notes below and push towards this week's goal", ex: matchExercise(tech, exs), last: null }); }
   if ((sp = spareEx())) mainItems.push(exItem(sp));
+  if (!mainItems.length) mainItems.push({ task: "Work towards this week's goal, using the lesson notes and diagrams for this week", ex: null, last: null });
   if (!theoryItems.length) theoryItems.push({ task: (boardNames.length ? "Name every note in this week's diagrams out loud (" + boardNames.slice(0, 3).join(", ") + (boardNames.length > 3 ? " and " + (boardNames.length - 3) + " more" : "") + ")" : "Name the notes on the strings this week uses") + ", then a 20 note round of the fretboard quiz", ex: null, last: null, link: ["#fretboard-quiz", "Open the fretboard quiz"] });
   if (day === 6) theoryItems.unshift({ task: (wk(n).exam && wk(n).exam.passed) ? "Theory exam passed. Retake it for a higher score if you like" : "Take this week's theory exam (pass mark " + EXAM_PASS + " of " + EXAM_LEN + ")", ex: null, last: null, link: ["#exam-" + n, "Open the exam"] });
   var techB = { name: "Technique", min: 15, items: techItems };
@@ -706,10 +707,38 @@ function dayPlan(n, day, len) {
   if (len === 30) {
     plan = [w0, { name: "Main focus", min: 15, items: techB.items.concat(mainItems.filter(function (x) { return !/^Take today's technique work further/.test(x.task); })) }, playB];
   } else plan = [w0, techB, theoryB, mainB, playB];
-  return { week: n, day: day, label: grp ? grp.label : "", blocks: plan };
+  return { week: n, day: day, label: grp ? grp.label : "", blocks: assignTimes(plan) };
 }
+/* Split each block's time across its items. A lesson time of 2 minutes or more is used as given
+   (shorter ones, like "30 seconds", describe one repetition). Watching or recording a clip gets
+   2 minutes. Everything else shares what is left evenly, in half minutes. The weekly goal is a
+   reminder, so it gets no time. */
+var WORD_N = { one: 1, two: 2, three: 3, four: 4, five: 5, ten: 10 };
+function lessonMinutes(it) {
+  var t = (it.ex ? it.ex.text : "") + " " + it.task, m = /\b(\d+|one|two|three|four|five|ten)[- ]minutes?\b/i.exec(t);
+  if (!m) return 0;
+  var v = WORD_N[m[1].toLowerCase()] || +m[1];
+  return v >= 2 ? v : 0;
+}
+function assignTimes(blocks) {
+  blocks.forEach(function (b) {
+    var total = b.min * 60, timed = b.items.filter(function (it) { return !it.goal; });
+    if (!timed.length) return;
+    if (timed.length === 1) { timed[0].secs = total; return; }
+    var fixed = timed.map(function (it) { return lessonMinutes(it) * 60 || (/watch last sunday|record a short clip/i.test(it.task) ? 120 : 0); });
+    var flex = timed.filter(function (it, i) { return !fixed[i]; }).length, fsum = fixed.reduce(function (a, c) { return a + c; }, 0);
+    var scale = !flex || fsum > total * 0.8 ? total / Math.max(1, fsum) * (flex ? 0.6 : 1) : 1;
+    var used = 0;
+    timed.forEach(function (it, i) { if (fixed[i]) { it.secs = Math.max(30, Math.round(fixed[i] * scale / 30) * 30); used += it.secs; } });
+    var share = flex ? Math.max(30, Math.floor((total - used) / flex / 30) * 30) : 0;
+    timed.forEach(function (it, i) { if (!fixed[i]) { it.secs = share; used += share; } });
+    timed[timed.length - 1].secs += total - used;
+  });
+  return blocks;
+}
+function fmtMins(secs) { var m = secs / 60; return (m % 1 ? m.toFixed(1) : String(m)) + " min"; }
 function planItemHTML(it, full) {
-  var h = '<span class="pi-task">' + esc(it.task) + "</span>";
+  var h = (it.secs ? '<span class="pi-time">' + fmtMins(it.secs) + '<span class="pi-left"></span></span>' : "") + '<span class="pi-task">' + esc(it.task) + "</span>";
   if (full && it.ex) h += '<span class="pi-ex"><b>' + esc(it.ex.name) + ".</b> " + esc(it.ex.text) + "</span>";
   if (full && it.last) h += '<span class="pi-last">Last logged: ' + it.last.bpm + " BPM on " + esc(it.last.date) + "</span>";
   if (full && it.link) h += '<a class="pi-link" href="' + it.link[0] + '">' + esc(it.link[1]) + "</a>";
@@ -800,6 +829,22 @@ function viewSession(n, day, len) {
   }
 
   function fmt(sec) { sec = Math.max(0, Math.ceil(sec)); return pad2(Math.floor(sec / 60)) + ":" + pad2(sec % 60); }
+  function blockLen(b) { return b.min * 60 + (st.extra || 0); }
+  function segs(b) {
+    var out = [], at = 0, timed = b.items.filter(function (it) { return it.secs; });
+    timed.forEach(function (it, i) { var len = it.secs + (i === timed.length - 1 ? st.extra || 0 : 0); out.push({ it: it, from: at, to: at + len }); at += len; });
+    return out;
+  }
+  function segIndex(b) { var el = blockLen(b) - st.remain, ss = segs(b); for (var i = 0; i < ss.length; i++) if (el < ss[i].to) return i; return ss.length - 1; }
+  function markSegs(b) {
+    var ss = segs(b), cur = segIndex(b), el = blockLen(b) - st.remain;
+    $$(".sn-items > li", app).forEach(function (li) {
+      var k = li.hasAttribute("data-seg") ? +li.getAttribute("data-seg") : -1; if (k < 0) return;
+      li.classList.toggle("seg-done", k < cur); li.classList.toggle("seg-cur", k === cur && ss.length > 1);
+      var left = $(".pi-left", li); if (left) left.textContent = k === cur && ss.length > 1 ? ", " + fmt(ss[k].to - el) + " left" : "";
+    });
+    return cur;
+  }
   function wake(onoff) {
     try {
       if (onoff && navigator.wakeLock && !lock) navigator.wakeLock.request("screen").then(function (l) { lock = l; l.addEventListener("release", function () { lock = null; }); }, function () {});
@@ -808,23 +853,26 @@ function viewSession(n, day, len) {
   }
   function draw() {
     if (st.finished) return drawDone();
-    var b = plan[st.idx], nb = plan[st.idx + 1], pct = 100 * (1 - st.remain / (b.min * 60));
+    var b = plan[st.idx], nb = plan[st.idx + 1], pct = 100 * (1 - st.remain / blockLen(b));
     var bp = blockBpm(b);
     if (bp && metSetFor !== st.idx) { met.setBpm(bp.bpm); metSetFor = st.idx; }
     now.innerHTML = '<div class="sn-head"><span class="eyebrow">Block ' + (st.idx + 1) + " of " + plan.length + "</span><h2>" + esc(b.name) + "</h2></div>" +
       '<div class="sn-clockrow"><div class="sn-clock mono">' + fmt(st.remain) + '</div><div class="sn-ring"><span style="width:' + pct.toFixed(1) + '%"></span></div></div>' +
       (st.gap > 0 ? '<div class="sn-gap"><b>Get ready:</b> ' + esc(b.name) + " starts in " + Math.ceil(st.gap) + (Math.ceil(st.gap) === 1 ? " second." : " seconds.") + ' <button type="button" class="linkbtn s-gonow">Start now</button></div>' : "") +
       '<div class="sn-ctl"><button type="button" class="btn s-go">' + (on ? "Pause" : st.spent > 0 || resumed ? "Resume" : "Start") + '</button><button type="button" class="btn ghost s-prev"' + (st.idx === 0 ? " disabled" : "") + '>Previous</button><button type="button" class="btn ghost s-next">' + (nb ? "Next block" : "Finish") + '</button><button type="button" class="btn ghost s-plus">+1 min</button></div>' +
-      '<h3 class="minihead">What to do</h3><ul class="tn-items sn-items">' + b.items.map(function (it) { return planItemHTML(it, true); }).join("") + "</ul>" +
+      '<h3 class="minihead">What to do</h3><ul class="tn-items sn-items">' + (function () {
+        var k = 0; return b.items.map(function (it) { var h = planItemHTML(it, true); return it.secs ? h.replace("<li ", '<li data-seg="' + (k++) + '" ') : h; }).join("");
+      })() + "</ul>" +
       (bp ? '<p class="sn-tip">Metronome set to ' + bp.bpm + " BPM, " + esc(bp.why) + ".</p>" : "");
     drawLesson(b);
     nextC.innerHTML = nb ? '<h2 class="minihead">Up next</h2><p class="sx-name">' + esc(nb.name) + " &middot; " + nb.min + ' min</p><p class="sx-what">' + esc(nb.items[0].task) + "</p>" : '<h2 class="minihead">Last block</h2><p class="sx-what">When this block ends you can log the session.</p>';
     var btWrap = $(".sess-bt", app); if (btWrap) btWrap.hidden = !/^(Play|Rehearse|Record)$/.test(b.name);
     $$(".sess-steps li", app).forEach(function (li, i) { li.className = i < st.idx ? "past" : i === st.idx ? "cur" : ""; });
-    var done = 0; for (var i = 0; i < st.idx; i++) done += plan[i].min * 60; done += b.min * 60 - st.remain;
-    $(".so-bar span", app).style.width = (100 * done / total).toFixed(1) + "%";
+    var done = 0; for (var i = 0; i < st.idx; i++) done += plan[i].min * 60; done += blockLen(b) - st.remain;
+    $(".so-bar span", app).style.width = Math.min(100, 100 * done / total).toFixed(1) + "%";
     $(".so-txt", app).textContent = fmt(done) + " of " + fmt(total);
     document.title = (on ? fmt(st.remain) + " " + b.name + " | " : "") + BASE_TITLE;
+    st.seg = markSegs(b);
     bind();
   }
   function drawDone() {
@@ -846,8 +894,15 @@ function viewSession(n, day, len) {
   function bind() {
     $(".s-go", app).addEventListener("click", function () { if (on) pause(); else play(); });
     $(".s-next", app).addEventListener("click", function () { advance(true); });
-    $(".s-prev", app).addEventListener("click", function () { if (st.idx > 0) { st.idx--; st.remain = plan[st.idx].min * 60; st.gap = 0; sessionSave(st); draw(); } });
-    $(".s-plus", app).addEventListener("click", function () { st.remain += 60; sessionSave(st); draw(); });
+    $(".s-prev", app).addEventListener("click", function () { if (st.idx > 0) { st.idx--; st.remain = plan[st.idx].min * 60; st.gap = 0; st.extra = 0; sessionSave(st); draw(); } });
+    $(".s-plus", app).addEventListener("click", function () { st.remain += 60; st.extra = (st.extra || 0) + 60; sessionSave(st); draw(); });
+    $$(".sn-items > li[data-seg]", app).forEach(function (li) {
+      li.addEventListener("click", function (e) {
+        if (e.target.closest("a, button")) return;
+        var b = plan[st.idx], sg = segs(b)[+li.getAttribute("data-seg")]; if (!sg) return;
+        st.remain = blockLen(b) - sg.from; st.gap = 0; sessionSave(st); draw();
+      });
+    });
     var g = $(".s-gonow", app); if (g) g.addEventListener("click", function () { st.gap = 0; draw(); });
   }
   function play() { audio(); on = true; last = Date.now(); clearInterval(iv); iv = setInterval(tick, 250); wake(true); draw(); }
@@ -855,7 +910,7 @@ function viewSession(n, day, len) {
   function advance(manual) {
     chime();
     if (st.idx + 1 >= plan.length) { finish(); return; }
-    st.idx++; st.remain = plan[st.idx].min * 60; st.gap = manual ? 0 : GAP_SECS;
+    st.idx++; st.remain = plan[st.idx].min * 60; st.gap = manual ? 0 : GAP_SECS; st.extra = 0;
     if (!manual && !st.auto) { on = false; clearInterval(iv); wake(false); st.gap = 0; }
     sessionSave(st); draw();
     if (!manual) try { $(".sess-now", app).scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) { /* old browser */ }
@@ -870,15 +925,18 @@ function viewSession(n, day, len) {
     var c = $(".sn-clock", app); if (!c) return;
     if (st.gap > 0 || $(".sn-gap", app)) { draw(); return; }
     c.textContent = fmt(st.remain);
-    var b = plan[st.idx]; $(".sn-ring span", app).style.width = (100 * (1 - st.remain / (b.min * 60))).toFixed(1) + "%";
-    var done = 0; for (var i = 0; i < st.idx; i++) done += plan[i].min * 60; done += b.min * 60 - st.remain;
-    $(".so-bar span", app).style.width = (100 * done / total).toFixed(1) + "%"; $(".so-txt", app).textContent = fmt(done) + " of " + fmt(total);
+    var b = plan[st.idx]; $(".sn-ring span", app).style.width = (100 * (1 - st.remain / blockLen(b))).toFixed(1) + "%";
+    var sg = markSegs(b);
+    if (st.seg !== undefined && sg > st.seg) { pluck(76, 0, 0.22); pluck(83, audio() ? ctx.currentTime + 0.12 : 0, 0.18); }
+    st.seg = sg;
+    var done = 0; for (var i = 0; i < st.idx; i++) done += plan[i].min * 60; done += blockLen(b) - st.remain;
+    $(".so-bar span", app).style.width = Math.min(100, 100 * done / total).toFixed(1) + "%"; $(".so-txt", app).textContent = fmt(done) + " of " + fmt(total);
     document.title = fmt(st.remain) + " " + b.name + " | " + BASE_TITLE;
   }
   $(".s-auto", app).addEventListener("change", function (e) { st.auto = e.target.checked; sessionSave(st); });
   $(".sess-steps", app).addEventListener("click", function (e) {
     var b = e.target.closest("button[data-i]"); if (!b || st.finished) return;
-    st.idx = +b.getAttribute("data-i"); st.remain = plan[st.idx].min * 60; st.gap = 0; sessionSave(st); draw();
+    st.idx = +b.getAttribute("data-i"); st.remain = plan[st.idx].min * 60; st.gap = 0; st.extra = 0; sessionSave(st); draw();
   });
   function onVis() { if (document.visibilityState === "visible" && on) wake(true); }
   document.addEventListener("visibilitychange", onVis);

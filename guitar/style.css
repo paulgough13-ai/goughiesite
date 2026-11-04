@@ -887,3 +887,12 @@ a.t-v { color: var(--accent); font-size: 20px; text-decoration: none; }
   .sess-side { align-self: stretch; align-content: start; }
   .sess-side .met { position: sticky; z-index: 2; box-shadow: 0 10px 30px rgba(0, 0, 0, .45); }
 }
+
+/* per-exercise time inside each block */
+.tn-items .pi-time { font: 600 12px var(--f-mono); color: var(--accent); }
+.ptimer .tn-items .pi-time, .sn-items .pi-time { display: block; }
+.sn-items > li[data-seg] { cursor: pointer; border-radius: 0 6px 6px 0; padding-top: 4px; padding-bottom: 4px; }
+.sn-items > li[data-seg]:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.sn-items > li.seg-cur { border-left-color: var(--accent); background: var(--accent-soft); }
+.sn-items > li.seg-done { opacity: .55; }
+.sn-items > li.seg-done .pi-task { text-decoration: line-through; }
