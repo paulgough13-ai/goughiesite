@@ -710,59 +710,147 @@ function planItemHTML(it, full) {
 }
 function timerHTML(fixedWeek) {
   var wsel = fixedWeek ? "" : '<label>Week <select class="t-week">' + D.weeks.map(function (w) { return '<option value="' + w.num + '">' + w.num + ". " + esc(w.title) + "</option>"; }).join("") + "</select></label>";
-  return '<div class="card ptimer"' + (fixedWeek ? ' data-week="' + fixedWeek + '"' : "") + '><h2>Practice timer</h2><p class="sub t-sub">Today\'s session, block by block</p>' +
+  return '<div class="card ptimer"' + (fixedWeek ? ' data-week="' + fixedWeek + '"' : "") + '><h2>Practice session</h2><p class="sub t-sub">Today\'s session, block by block</p>' +
     '<div class="t-pick">' + wsel + '<label>Day <select class="t-day">' + [1, 2, 3, 4, 5, 6].map(function (d) { return '<option value="' + d + '">Day ' + d + " (" + DAY_NAMES[d - 1] + ")</option>"; }).join("") + '<option value="7">Sunday (record)</option></select></label>' +
     '<div class="seg small" role="group" aria-label="Session length"><button type="button" data-len="60" aria-pressed="true">60 min</button><button type="button" data-len="30" aria-pressed="false">30 min</button></div></div>' +
-    '<ol class="blocks"></ol><div class="tclock" aria-live="polite">05:00</div><div class="tnow"></div>' +
-    '<div class="trow2"><button type="button" class="btn t-go">Start</button><button type="button" class="btn ghost t-skip">Skip block</button></div>' +
-    '<p class="tdone" hidden>Session complete. <button type="button" class="linkbtn t-log">Log this session</button></p></div>';
+    '<ol class="blocks"></ol><p class="t-resume" hidden></p><a class="btn t-open" href="#">Start the session</a>' +
+    '<p class="sub t-note">Opens a full-screen session page that talks you through each block and moves on by itself.</p></div>';
 }
-function mountTimer(root, onLog) {
-  var fixed = +root.getAttribute("data-week") || 0, wsel = $(".t-week", root), dsel = $(".t-day", root);
-  var today = (new Date().getDay() + 6) % 7 + 1;
+function mountTimer(root) {
+  var fixed = +root.getAttribute("data-week") || 0, wsel = $(".t-week", root), dsel = $(".t-day", root), len = 60;
   if (wsel) wsel.value = currentWeek();
-  dsel.value = today;
-  var len = 60, P = null, plan = [], idx = 0, remain = 0, on = false, last = 0, iv = null, total = 0;
-  var list = $(".blocks", root), clock = $(".tclock", root), now = $(".tnow", root), go = $(".t-go", root);
+  dsel.value = (new Date().getDay() + 6) % 7 + 1;
   function week() { return fixed || +wsel.value; }
   function build() {
-    P = dayPlan(week(), +dsel.value, len); plan = P.blocks; idx = 0; remain = plan[0].min * 60; total = 0;
-    if (on) stop(); go.textContent = "Start"; $(".tdone", root).hidden = true;
-    $(".t-sub", root).textContent = "Week " + P.week + ", " + (P.day === 7 ? "Sunday" : "Day " + P.day) + (P.label && P.day !== 7 ? " (from " + P.label.toLowerCase() + ")" : "") + ": " + plan.reduce(function (a, b) { return a + b.min; }, 0) + " minutes";
-    draw();
+    var P = dayPlan(week(), +dsel.value, len), mins = P.blocks.reduce(function (a, b) { return a + b.min; }, 0);
+    $(".t-sub", root).textContent = "Week " + P.week + ", " + (P.day === 7 ? "Sunday" : "Day " + P.day) + ": " + mins + " minutes in " + P.blocks.length + " blocks";
+    $(".blocks", root).innerHTML = P.blocks.map(function (b) { return '<li><div class="bh"><span>' + esc(b.name) + "</span><span>" + b.min + ' min</span></div><span class="bwhat">' + esc(b.items[0].task) + "</span></li>"; }).join("");
+    var href = "#session-" + P.week + "-" + P.day + "-" + len, saved = sessionLoad(), same = saved && saved.key === href.slice(1) && !saved.finished;
+    $(".t-open", root).setAttribute("href", href); $(".t-open", root).textContent = same ? "Resume the session" : "Start the session";
+    var rs = $(".t-resume", root); rs.hidden = !same; if (same) rs.textContent = "You have this session in progress: block " + (saved.idx + 1) + " of " + P.blocks.length + ".";
   }
-  function draw() {
-    list.innerHTML = plan.map(function (b, i) {
-      return '<li class="' + (i < idx ? "past" : i === idx ? "cur" : "") + '"><div class="bh"><span>' + esc(b.name) + "</span><span>" + b.min + ' min</span></div><span class="bwhat">' + esc(b.items[0].task) + "</span></li>";
-    }).join("");
-    var m = Math.floor(Math.max(0, remain) / 60), s = Math.floor(Math.max(0, remain) % 60);
-    clock.textContent = pad2(m) + ":" + pad2(s);
-    var b = plan[Math.min(idx, plan.length - 1)];
-    now.innerHTML = b ? '<div class="tn-head">Now: ' + esc(b.name) + '</div><ul class="tn-items">' + b.items.map(function (it) { return planItemHTML(it, true); }).join("") + "</ul>" : "";
-  }
-  function tick() {
-    var t = Date.now(), dt = (t - last) / 1000; last = t; remain -= dt; total += dt;
-    if (remain <= 0) { chime(); idx++; if (idx >= plan.length) { finish(); return; } remain = plan[idx].min * 60; }
-    draw();
-  }
-  function finish() { stop(); idx = plan.length - 1; remain = 0; draw(); $(".tdone", root).hidden = false; go.textContent = "Start"; }
-  function stop() { on = false; clearInterval(iv); go.textContent = "Resume"; }
-  go.addEventListener("click", function () {
-    if (on) { stop(); return; }
-    if (!$(".tdone", root).hidden) build();
-    audio(); on = true; last = Date.now(); iv = setInterval(tick, 250); go.textContent = "Pause";
-  });
-  $(".t-skip", root).addEventListener("click", function () { chime(); idx++; if (idx >= plan.length) { finish(); return; } remain = plan[idx].min * 60; draw(); });
   $$("[data-len]", root).forEach(function (b) {
-    b.addEventListener("click", function () {
-      $$("[data-len]", root).forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
-      len = +b.getAttribute("data-len"); build();
-    });
+    b.addEventListener("click", function () { $$("[data-len]", root).forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); }); len = +b.getAttribute("data-len"); build(); });
   });
   dsel.addEventListener("change", build); if (wsel) wsel.addEventListener("change", build);
-  $(".t-log", root).addEventListener("click", function () { onLog && onLog(Math.max(1, Math.round(total / 60)), week()); });
   build();
-  running.push(function () { if (on) stop(); });
+}
+
+/* ===== practice session page ===== */
+var SESSION_KEY = "gtr52-session", GAP_SECS = 8, BASE_TITLE = document.title;
+function sessionLoad() { var s = LS.get(SESSION_KEY, null); return s && Date.now() - (s.savedAt || 0) < 12 * 3600 * 1000 ? s : null; }
+function sessionSave(s) { s.savedAt = Date.now(); LS.set(SESSION_KEY, s); }
+function sessionClear() { try { localStorage.removeItem(SESSION_KEY); } catch (e) { /* unavailable */ } }
+function blockBpm(b) {
+  for (var i = 0; i < b.items.length; i++) {
+    var it = b.items[i], m = /(\d{2,3})\s*BPM/i.exec((it.ex ? it.ex.text : "") + " " + it.task);
+    if (it.last && it.last.bpm) return { bpm: +it.last.bpm, why: "your last logged tempo for " + it.ex.name };
+    if (m) return { bpm: +m[1], why: "the tempo in this block's instructions" };
+  }
+  return null;
+}
+function viewSession(n, day, len) {
+  var P = dayPlan(n, day, len), plan = P.blocks, key = "session-" + n + "-" + day + "-" + len, w = W(n);
+  var total = plan.reduce(function (a, b) { return a + b.min; }, 0) * 60;
+  var saved = sessionLoad(), st = saved && saved.key === key && !saved.finished ? saved : { key: key, idx: 0, remain: plan[0].min * 60, gap: 0, spent: 0, auto: true, finished: false };
+  var resumed = st === saved;
+  VIEW.noRerender = true;
+  $("#app").innerHTML = '<div class="sess">' +
+    '<div class="wrap sess-top"><a class="sess-exit" href="' + weekHref(n) + '">&larr; Week ' + n + '</a><div class="sess-title"><span class="eyebrow">Practice session</span><h1>Week ' + n + ", " + (day === 7 ? "Sunday" : "Day " + day + " (" + DAY_NAMES[day - 1] + ")") + "</h1><p>" + esc(w.title) + '</p></div>' +
+    '<label class="opt sess-auto"><input type="checkbox" class="s-auto"' + (st.auto ? " checked" : "") + "> Move on automatically</label></div>" +
+    '<div class="wrap"><div class="sess-overall"><div class="so-bar"><span></span></div><span class="so-txt mono"></span></div>' +
+    '<ol class="sess-steps">' + plan.map(function (b, i) { return '<li><button type="button" data-i="' + i + '"><span class="ss-n">' + (i + 1) + '</span><span class="ss-name">' + esc(b.name) + '</span><span class="ss-min">' + b.min + " min</span></button></li>"; }).join("") + "</ol>" +
+    '<div class="sess-grid"><section class="card sess-now" aria-live="polite"></section><aside class="sess-side">' +
+    '<div class="card sess-next"></div>' + metronomeHTML() +
+    ((w.bt || []).length ? '<div class="sess-bt" hidden><h2 class="minihead">Backing tracks for this week</h2>' + w.bt.map(bandHTML).join("") + "</div>" : "") +
+    "</aside></div></div></div>";
+  var app = $("#app"), now = $(".sess-now", app), nextC = $(".sess-next", app), met = mountMetronome($(".met", app));
+  $$(".band", app).forEach(mountBand);
+  var on = false, iv = null, last = 0, lock = null, metSetFor = -1;
+
+  function fmt(sec) { sec = Math.max(0, Math.ceil(sec)); return pad2(Math.floor(sec / 60)) + ":" + pad2(sec % 60); }
+  function wake(onoff) {
+    try {
+      if (onoff && navigator.wakeLock && !lock) navigator.wakeLock.request("screen").then(function (l) { lock = l; l.addEventListener("release", function () { lock = null; }); }, function () {});
+      if (!onoff && lock) { lock.release(); lock = null; }
+    } catch (e) { /* not supported */ }
+  }
+  function draw() {
+    if (st.finished) return drawDone();
+    var b = plan[st.idx], nb = plan[st.idx + 1], pct = 100 * (1 - st.remain / (b.min * 60));
+    var bp = blockBpm(b);
+    if (bp && metSetFor !== st.idx) { met.setBpm(bp.bpm); metSetFor = st.idx; }
+    now.innerHTML = '<div class="sn-head"><span class="eyebrow">Block ' + (st.idx + 1) + " of " + plan.length + "</span><h2>" + esc(b.name) + "</h2></div>" +
+      '<div class="sn-clockrow"><div class="sn-clock mono">' + fmt(st.remain) + '</div><div class="sn-ring"><span style="width:' + pct.toFixed(1) + '%"></span></div></div>' +
+      (st.gap > 0 ? '<div class="sn-gap"><b>Get ready:</b> ' + esc(b.name) + " starts in " + Math.ceil(st.gap) + (Math.ceil(st.gap) === 1 ? " second." : " seconds.") + ' <button type="button" class="linkbtn s-gonow">Start now</button></div>' : "") +
+      '<div class="sn-ctl"><button type="button" class="btn s-go">' + (on ? "Pause" : st.spent > 0 || resumed ? "Resume" : "Start") + '</button><button type="button" class="btn ghost s-prev"' + (st.idx === 0 ? " disabled" : "") + '>Previous</button><button type="button" class="btn ghost s-next">' + (nb ? "Next block" : "Finish") + '</button><button type="button" class="btn ghost s-plus">+1 min</button></div>' +
+      '<h3 class="minihead">What to do</h3><ul class="tn-items sn-items">' + b.items.map(function (it) { return planItemHTML(it, true); }).join("") + "</ul>" +
+      (bp ? '<p class="sn-tip">Metronome set to ' + bp.bpm + " BPM, " + esc(bp.why) + ".</p>" : "");
+    nextC.innerHTML = nb ? '<h2 class="minihead">Up next</h2><p class="sx-name">' + esc(nb.name) + " &middot; " + nb.min + ' min</p><p class="sx-what">' + esc(nb.items[0].task) + "</p>" : '<h2 class="minihead">Last block</h2><p class="sx-what">When this block ends you can log the session.</p>';
+    var btWrap = $(".sess-bt", app); if (btWrap) btWrap.hidden = !/^(Play|Rehearse|Record)$/.test(b.name);
+    $$(".sess-steps li", app).forEach(function (li, i) { li.className = i < st.idx ? "past" : i === st.idx ? "cur" : ""; });
+    var done = 0; for (var i = 0; i < st.idx; i++) done += plan[i].min * 60; done += b.min * 60 - st.remain;
+    $(".so-bar span", app).style.width = (100 * done / total).toFixed(1) + "%";
+    $(".so-txt", app).textContent = fmt(done) + " of " + fmt(total);
+    document.title = (on ? fmt(st.remain) + " " + b.name + " | " : "") + BASE_TITLE;
+    bind();
+  }
+  function drawDone() {
+    var mins = Math.max(1, Math.round(st.spent / 60));
+    now.innerHTML = '<div class="sn-head"><span class="eyebrow">Session complete</span><h2>Nice work</h2></div><p>You practised for ' + mins + " minutes across " + plan.length + " blocks.</p>" +
+      '<div class="sn-ctl"><button type="button" class="btn s-log">Log ' + mins + ' minutes</button><a class="btn ghost" href="' + weekHref(n) + '">Back to Week ' + n + "</a>" + (day < 7 ? '<a class="btn ghost" href="#exam-' + n + '">Theory exam</a>' : "") + "</div><p class=\"s-logged sub\" aria-live=\"polite\"></p>";
+    nextC.innerHTML = '<h2 class="minihead">Tomorrow</h2><p class="sx-what">' + (day < 6 ? "Day " + (day + 1) + " of Week " + n + "." : day === 6 ? "Sunday: record your progress clip." : "Day 1 of Week " + Math.min(52, n + 1) + ".") + "</p>";
+    $$(".sess-steps li", app).forEach(function (li) { li.className = "past"; });
+    $(".so-bar span", app).style.width = "100%"; $(".so-txt", app).textContent = "Done";
+    document.title = BASE_TITLE;
+    var lg = $(".s-log", app);
+    lg.addEventListener("click", function () {
+      addLog({ date: todayStr(), week: n, minutes: mins, exercise: "Full practice session", bpm: null, note: (day === 7 ? "Sunday" : "Day " + day) + " session" });
+      lg.disabled = true; $(".s-logged", app).textContent = "Logged " + mins + " minutes against Week " + n + "."; st.logged = true; sessionSave(st);
+    });
+    if (st.logged) { lg.disabled = true; $(".s-logged", app).textContent = "Already logged."; }
+  }
+  function bind() {
+    $(".s-go", app).addEventListener("click", function () { if (on) pause(); else play(); });
+    $(".s-next", app).addEventListener("click", function () { advance(true); });
+    $(".s-prev", app).addEventListener("click", function () { if (st.idx > 0) { st.idx--; st.remain = plan[st.idx].min * 60; st.gap = 0; sessionSave(st); draw(); } });
+    $(".s-plus", app).addEventListener("click", function () { st.remain += 60; sessionSave(st); draw(); });
+    var g = $(".s-gonow", app); if (g) g.addEventListener("click", function () { st.gap = 0; draw(); });
+  }
+  function play() { audio(); on = true; last = Date.now(); clearInterval(iv); iv = setInterval(tick, 250); wake(true); draw(); }
+  function pause() { on = false; clearInterval(iv); wake(false); sessionSave(st); draw(); }
+  function advance(manual) {
+    chime();
+    if (st.idx + 1 >= plan.length) { finish(); return; }
+    st.idx++; st.remain = plan[st.idx].min * 60; st.gap = manual ? 0 : GAP_SECS;
+    if (!manual && !st.auto) { on = false; clearInterval(iv); wake(false); st.gap = 0; }
+    sessionSave(st); draw();
+    if (!manual) try { $(".sess-now", app).scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) { /* old browser */ }
+  }
+  function finish() { on = false; clearInterval(iv); wake(false); st.finished = true; st.remain = 0; sessionSave(st); draw(); }
+  var saveTick = 0;
+  function tick() {
+    var t = Date.now(), dt = Math.min(5, (t - last) / 1000); last = t;
+    if (st.gap > 0) { st.gap -= dt; if (st.gap < 0) st.gap = 0; }
+    else { st.remain -= dt; st.spent += dt; if (st.remain <= 0) { advance(false); return; } }
+    if (++saveTick % 8 === 0) sessionSave(st);
+    var c = $(".sn-clock", app); if (!c) return;
+    if (st.gap > 0 || $(".sn-gap", app)) { draw(); return; }
+    c.textContent = fmt(st.remain);
+    var b = plan[st.idx]; $(".sn-ring span", app).style.width = (100 * (1 - st.remain / (b.min * 60))).toFixed(1) + "%";
+    var done = 0; for (var i = 0; i < st.idx; i++) done += plan[i].min * 60; done += b.min * 60 - st.remain;
+    $(".so-bar span", app).style.width = (100 * done / total).toFixed(1) + "%"; $(".so-txt", app).textContent = fmt(done) + " of " + fmt(total);
+    document.title = fmt(st.remain) + " " + b.name + " | " + BASE_TITLE;
+  }
+  $(".s-auto", app).addEventListener("change", function (e) { st.auto = e.target.checked; sessionSave(st); });
+  $(".sess-steps", app).addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-i]"); if (!b || st.finished) return;
+    st.idx = +b.getAttribute("data-i"); st.remain = plan[st.idx].min * 60; st.gap = 0; sessionSave(st); draw();
+  });
+  function onVis() { if (document.visibilityState === "visible" && on) wake(true); }
+  document.addEventListener("visibilitychange", onVis);
+  running.push(function () { on = false; clearInterval(iv); wake(false); sessionSave(st); document.removeEventListener("visibilitychange", onVis); document.title = BASE_TITLE; VIEW.noRerender = false; });
+  sessionSave(st); draw();
 }
 
 /* ===== drone ===== */
@@ -1355,7 +1443,7 @@ var TOOLS = [
   ["scales", "Scales and chord shapes", "Colour-coded scale degrees, CAGED positions and movable chord shapes"],
   ["backing-tracks", "Backing tracks", "Every vamp and blues in the program, plus your own"],
   ["drone", "Drone", "A held root note for modes and intonation"],
-  ["practice-timer", "Practice timer", "The daily routine, block by block, with the metronome"]
+  ["practice-timer", "Practice session", "Today's plan, block by block, on its own page that moves on by itself"]
 ];
 
 /* ===== log ===== */
@@ -1474,8 +1562,8 @@ function viewTools() {
     TOOLS.map(function (t) { return '<a class="tool" href="#' + t[0] + '"><span class="tool-n">' + esc(t[1]) + '</span><span class="tool-d">' + esc(t[2]) + "</span></a>"; }).join("") + "</div></div>";
 }
 function viewTimer() {
-  $("#app").innerHTML = '<div class="wrap pagehead"><div class="eyebrow">Practice tools</div><h1>Practice timer</h1></div><div class="wrap"><div class="two">' + timerHTML() + metronomeHTML() + "</div></div>";
-  var app = $("#app"); mountMetronome($(".met", app));
+  $("#app").innerHTML = '<div class="wrap pagehead"><div class="eyebrow">Practice tools</div><h1>Practice session</h1><p class="lede">Pick a week and day, then start. The session page talks you through every block and moves on by itself.</p></div><div class="wrap narrowish">' + timerHTML() + "</div>";
+  var app = $("#app");
   mountTimer($(".ptimer", app), function (mins, wk) { var cur = wk || currentWeek(); addLog({ date: todayStr(), week: cur, minutes: mins, exercise: "Full practice session", bpm: null, note: "" }); $(".tdone", app).textContent = "Logged " + mins + " min against Week " + cur + "."; });
 }
 function viewDrone() {
@@ -2784,6 +2872,7 @@ function route() {
   else if (h === "backing-tracks") { viewBacking(); nav = "tools"; }
   else if (h === "drone") { viewDrone(); nav = "tools"; }
   else if (h === "practice-timer") { viewTimer(); nav = "tools"; }
+  else if (/^session-\d{1,2}-[1-7]-(30|60)$/.test(h) && +h.split("-")[1] >= 1 && +h.split("-")[1] <= 52) { var sp = h.split("-"); viewSession(+sp[1], +sp[2], +sp[3]); nav = "tools"; }
   else viewHome();
   VIEW.name = h;
   $$("[data-nav]").forEach(function (a) { a.setAttribute("aria-current", a.getAttribute("data-nav") === nav ? "page" : "false"); });
@@ -2791,6 +2880,7 @@ function route() {
 }
 function rerender(reason) {
   if (reason === "caps") { if (VIEW.onCaps) VIEW.onCaps(); return; }
+  if (VIEW.noRerender) return; /* a practice session is running: never reset it */
   /* after sync, redraw unless the person is typing */
   var a = document.activeElement;
   if (a && a.closest && a.closest("#app") && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return;
