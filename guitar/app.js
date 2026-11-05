@@ -683,7 +683,7 @@ function dayPlan(n, day, len) {
   var tech = take("tech") || take("theory"), theory = take("theory"), play = [], rest = [];
   tasks.forEach(function (t, i) { if (used[i]) return; (classifyTask(t) === "play" ? play : rest).push(t); used[i] = 1; });
   var dayWords = stemWords(tasks.join(" "));
-  var btNames = (w.bt || []).map(function (id) { return D.bt[id] && D.bt[id].name; }).filter(Boolean)
+  var btNames = weekTracks(w).map(function (id) { return D.bt[id] && D.bt[id].name; }).filter(Boolean)
     .map(function (nm, i) { return { nm: nm, i: i, sc: stemWords(nm).filter(function (x) { return dayWords.indexOf(x) > -1; }).length }; })
     .sort(function (a, b) { return b.sc - a.sc || a.i - b.i; }).map(function (x) { return x.nm; });
   var boardNames = (w.boards || []).map(function (b) { return b.title; }).filter(Boolean);
@@ -700,6 +700,8 @@ function dayPlan(n, day, len) {
   var theoryB = { name: "Theory and fretboard", min: 10, items: theoryItems };
   mainItems.push({ task: "Goal for the week: " + stripHtml(w.goal), ex: null, last: null, goal: true });
   var mainB = { name: "Main focus", min: 20, items: mainItems };
+  var pick = PLAY_PICK[n];
+  if (!playItems.length && pick && !(w.bt && w.bt.length)) playItems.push({ task: "Over the " + btNames[0] + " backing track: " + pick.how, ex: null, last: null, link: ["#backing-tracks", "The track is on this page during Play, or open all the backing tracks"] });
   if (!playItems.length) playItems.push({ task: btNames.length ? "Play today's material over the " + btNames[0] + " backing track" + (btNames.length > 1 ? " (or " + btNames.slice(1).join(", ") + ")" : "") : "Use today's material in a song or over any backing track", ex: null, last: null, link: btNames.length ? ["#week-" + n, "Backing tracks are on this week's page"] : ["#backing-tracks", "Open the backing tracks"] });
   playItems.push({ task: "Record a short clip of the best take", ex: null, last: null });
   var playB = { name: "Play", min: 10, items: playItems };
@@ -714,6 +716,25 @@ function dayPlan(n, day, len) {
    2 minutes. Everything else shares what is left evenly, in half minutes. The weekly goal is a
    reminder, so it gets no time. */
 var WORD_N = { one: 1, two: 2, three: 3, four: 4, five: 5, ten: 10 };
+/* Weeks whose lesson names no backing track get one from the library, with a concrete way to use it. */
+var PLAY_PICK = {
+  1: { bt: ["g-cdg"], how: "Play the root of each chord as it comes round, one note per beat, saying its name: G (low E, fret 3), C (A string, fret 3), D (A string, fret 5). Then play any natural note on the low E or A string on each beat, naming it" },
+  4: { bt: ["c-amfg"], how: "Play the C major scale up and down the A string (frets 3, 5, 7, 8, 10, 12, 14, 15), one note per beat, saying the names. Then make up short phrases from those notes, ending on C, and try landing on a note of each chord as it changes" },
+  7: { bt: ["c-amfg", "slow-am"], how: "Play the C major scale over C, Am, F, G and end your phrases on C. Then play exactly the same notes over Slow Am, F, C, G and end on A: the same notes now sound minor, because A is home" },
+  8: { bt: ["g-cdg"], how: "Over each chord, play its root, then an interval above it using this week's shapes (a 3rd, 5th or octave), naming the interval out loud as you play it" },
+  11: { bt: ["c-amfg"], how: "Play each chord with a different CAGED shape every time round: for example C as the open C shape, then the A shape at fret 3, then the E shape at fret 8. Keep the strumming steady while you move" },
+  12: { bt: ["g-pop"], how: "Strum along at one rhythm level per time round: quarter notes, then eighths, then sixteenths, then a syncopated pattern that skips some downbeats. Keep your hand moving even when you don't hit the strings" },
+  13: { bt: ["g-pop"], how: "Play through the progression with open chords, then barre chords, then improvise over it using the G major scale, landing on G, B or D over the G chord" },
+  16: { bt: ["am-jam"], how: "Play A natural minor runs over the jam with strict alternate picking at a tempo you can keep clean. When a run is clean four times in a row, raise the track by 5 BPM" },
+  17: { bt: ["am-jam"], how: "Mix this week's legato runs and bursts into an A minor improvisation: a short fast burst, then a held note with vibrato, then space. Pick only the first note on each string" },
+  23: { bt: ["c-amfg"], how: "Without looking at the chord names, find the root of each chord by ear as it arrives, then say whether the chord is major or minor. Check yourself against the chord names" },
+  24: { bt: ["am-jam"], how: "Play a phrase you have transcribed this week over the A minor jam, then play it again with one change: a new rhythm, a different last note or an added bend" },
+  25: { bt: ["slow-am"], how: "Fingerpick the chords along with the track using p, i, m and a: thumb on the root of each chord, fingers on the top three strings. Keep the thumb steady on every beat" },
+  26: { bt: ["g-cdg", "slow-am"], how: "Before playing, work out the key of each track from its chords. Then improvise with the matching pentatonic: G major pentatonic over G, C, D, G, and A minor pentatonic over Slow Am, F, C, G" },
+  30: { bt: ["am-jam"], how: "Play this week's economy picked A minor runs over the jam, keeping the pick moving in the same direction on each string change. Start slower than feels necessary" },
+  40: { bt: ["c-amfg"], how: "Play a simple C major melody in 6ths, then in octaves, over C, Am, F, G. Try to keep the top note of each 6th on a note of the chord underneath" }
+};
+function weekTracks(w) { return (w.bt && w.bt.length) ? w.bt : ((PLAY_PICK[w.num] || {}).bt || []); }
 function lessonMinutes(it) {
   var t = (it.ex ? it.ex.text : "") + " " + it.task, m = /\b(\d+|one|two|three|four|five|ten)[- ]minutes?\b/i.exec(t);
   if (!m) return 0;
@@ -798,7 +819,7 @@ function viewSession(n, day, len) {
     '<ol class="sess-steps">' + plan.map(function (b, i) { return '<li><button type="button" data-i="' + i + '"><span class="ss-n">' + (i + 1) + '</span><span class="ss-name">' + esc(b.name) + '</span><span class="ss-min">' + b.min + " min</span></button></li>"; }).join("") + "</ol>" +
     '<div class="sess-grid"><div class="sess-main"><section class="card sess-now" aria-live="polite"></section><section class="card sess-lesson" hidden></section></div><aside class="sess-side">' +
     '<div class="card sess-next"></div>' +
-    ((w.bt || []).length ? '<div class="sess-bt" hidden><h2 class="minihead">Backing tracks for this week</h2>' + w.bt.map(bandHTML).join("") + "</div>" : "") +
+    (weekTracks(w).length ? '<div class="sess-bt" hidden><h2 class="minihead">' + (w.bt && w.bt.length ? "Backing tracks for this week" : "Backing track for today") + "</h2>" + weekTracks(w).map(bandHTML).join("") + "</div>" : "") +
     metronomeHTML() + "</aside></div></div></div>";
   var app = $("#app"), now = $(".sess-now", app), nextC = $(".sess-next", app), met = mountMetronome($(".met", app));
   var metEl = $(".sess-side .met", app);
