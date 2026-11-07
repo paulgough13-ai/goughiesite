@@ -612,7 +612,8 @@ function weekExercises(w) {
   $$("p, li", d).forEach(function (el) {
     var st = el.querySelector("strong"); if (!st) return;
     var name = st.textContent.replace(/^\s*\d+\.\s*/, "").replace(/\.\s*$/, "").trim();
-    var text = el.textContent.replace(st.textContent, "").trim();
+    var text = el.textContent.replace(st.textContent, "").trim(), html = el.outerHTML;
+    for (var nx = el.nextElementSibling; nx && !nx.querySelector("strong"); nx = nx.nextElementSibling) html += nx.outerHTML;
     if (!text) {
       /* instructions can follow the heading as tab and a notes paragraph */
       for (var sib = el.nextElementSibling; sib && !sib.querySelector("strong"); sib = sib.nextElementSibling) {
@@ -620,7 +621,7 @@ function weekExercises(w) {
       }
       text = text.replace(/\s+/g, " ").trim();
     }
-    if (name && text) out.push({ name: name, text: text, words: stemWords(name.replace(/\([^)]*\)/g, "")) });
+    if (name && text) out.push({ name: name, text: text, html: html, words: stemWords(name.replace(/\([^)]*\)/g, "")) });
   });
   return out;
 }
@@ -758,6 +759,19 @@ function assignTimes(blocks) {
   return blocks;
 }
 function fmtMins(secs) { var m = secs / 60; return (m % 1 ? m.toFixed(1) : String(m)) + " min"; }
+function boardsFor(w, it) {
+  var bs = w.boards || [];
+  if (!bs.length) return [];
+  if (/diagram/i.test(it.task)) return bs.map(function (b, i) { return i; });
+  var want = stemWords((it.ex ? it.ex.name : "") + " " + it.task).filter(function (x) { return !/^(exercise|play|today|week|work|use|take|further)$/.test(x); });
+  var out = [];
+  bs.forEach(function (b, i) {
+    var bw = stemWords(b.title).filter(function (x) { return x.length > 1; });
+    var hit = bw.filter(function (x) { return want.indexOf(x) > -1; }).length;
+    if (bw.length && hit >= Math.min(2, bw.length) && hit / bw.length >= 0.5) out.push(i);
+  });
+  return out;
+}
 function planItemHTML(it, full) {
   var h = (it.secs ? '<span class="pi-time">' + fmtMins(it.secs) + '<span class="pi-left"></span></span>' : "") + '<span class="pi-task">' + esc(it.task) + "</span>";
   if (full && it.ex) h += '<span class="pi-ex"><b>' + esc(it.ex.name) + ".</b> " + esc(it.ex.text) + "</span>";
@@ -872,19 +886,44 @@ function viewSession(n, day, len) {
       if (!onoff && lock) { lock.release(); lock = null; }
     } catch (e) { /* not supported */ }
   }
+  var itemsFor = -1;
+  function itemHTML(it, k) {
+    var h = (it.secs ? '<span class="pi-time">' + fmtMins(it.secs) + '<span class="pi-left"></span></span>' : "") + '<span class="pi-task">' + esc(it.task) + "</span>";
+    if (it.ex) h += '<div class="pi-exhtml lesson">' + it.ex.html + "</div>";
+    var bi = it.goal ? [] : boardsFor(w, it);
+    if (bi.length) h += '<div class="board-grid pi-boards" data-boards="' + bi.join(",") + '">' + boardsHTML(bi.map(function (i) { return w.boards[i]; })) + "</div>";
+    if (it.last) h += '<span class="pi-last">Last logged: ' + it.last.bpm + " BPM on " + esc(it.last.date) + "</span>";
+    if (it.link) h += '<a class="pi-link" href="' + it.link[0] + '">' + esc(it.link[1]) + "</a>";
+    return "<li" + (k >= 0 ? ' data-seg="' + k + '"' : "") + ' class="' + (it.goal ? "goal" : "") + '">' + h + "</li>";
+  }
+  function drawItems(b) {
+    if (itemsFor === st.idx && $(".sn-static", now)) return;
+    itemsFor = st.idx;
+    var bp = blockBpm(b), k = 0;
+    $(".sn-static", now).innerHTML = '<h3 class="minihead">What to do</h3><ul class="tn-items sn-items">' +
+      b.items.map(function (it) { return itemHTML(it, it.secs ? k++ : -1); }).join("") + "</ul>" +
+      (bp ? '<p class="sn-tip">Metronome set to ' + bp.bpm + " BPM, " + esc(bp.why) + ".</p>" : "");
+    mountTabs($(".sn-static", now));
+    $$(".pi-boards", now).forEach(function (g) { mountBoards(g, g.getAttribute("data-boards").split(",").map(function (i) { return w.boards[+i]; })); });
+    $$(".sn-items > li[data-seg]", now).forEach(function (li) {
+      li.addEventListener("click", function (e) {
+        if (e.target.closest("a, button, select, input, label, summary, .board-svg, .pi-exhtml")) return;
+        var bk = plan[st.idx], sg = segs(bk)[+li.getAttribute("data-seg")]; if (!sg) return;
+        st.remain = blockLen(bk) - sg.from; st.gap = 0; sessionSave(st); draw();
+      });
+    });
+  }
   function draw() {
     if (st.finished) return drawDone();
+    if (!$(".sn-dyn", now)) { now.innerHTML = '<div class="sn-dyn"></div><div class="sn-static"></div>'; itemsFor = -1; }
     var b = plan[st.idx], nb = plan[st.idx + 1], pct = 100 * (1 - st.remain / blockLen(b));
     var bp = blockBpm(b);
     if (bp && metSetFor !== st.idx) { met.setBpm(bp.bpm); metSetFor = st.idx; }
-    now.innerHTML = '<div class="sn-head"><span class="eyebrow">Block ' + (st.idx + 1) + " of " + plan.length + "</span><h2>" + esc(b.name) + "</h2></div>" +
-      '<div class="sn-clockrow"><div class="sn-clock mono">' + fmt(st.remain) + '</div><div class="sn-ring"><span style="width:' + pct.toFixed(1) + '%"></span></div></div>' +
+    $(".sn-dyn", now).innerHTML = '<div class="sn-top"><div class="sn-head"><span class="eyebrow">Block ' + (st.idx + 1) + " of " + plan.length + "</span><h2>" + esc(b.name) + '</h2></div><div class="sn-clock mono">' + fmt(st.remain) + "</div></div>" +
+      '<div class="sn-ring"><span style="width:' + pct.toFixed(1) + '%"></span></div>' +
       (st.gap > 0 ? '<div class="sn-gap"><b>Get ready:</b> ' + esc(b.name) + " starts in " + Math.ceil(st.gap) + (Math.ceil(st.gap) === 1 ? " second." : " seconds.") + ' <button type="button" class="linkbtn s-gonow">Start now</button></div>' : "") +
-      '<div class="sn-ctl"><button type="button" class="btn s-go">' + (on ? "Pause" : st.spent > 0 || resumed ? "Resume" : "Start") + '</button><button type="button" class="btn ghost s-prev"' + (st.idx === 0 ? " disabled" : "") + '>Previous</button><button type="button" class="btn ghost s-next">' + (nb ? "Next block" : "Finish") + '</button><button type="button" class="btn ghost s-plus">+1 min</button></div>' +
-      '<h3 class="minihead">What to do</h3><ul class="tn-items sn-items">' + (function () {
-        var k = 0; return b.items.map(function (it) { var h = planItemHTML(it, true); return it.secs ? h.replace("<li ", '<li data-seg="' + (k++) + '" ') : h; }).join("");
-      })() + "</ul>" +
-      (bp ? '<p class="sn-tip">Metronome set to ' + bp.bpm + " BPM, " + esc(bp.why) + ".</p>" : "");
+      '<div class="sn-ctl"><button type="button" class="btn s-go">' + (on ? "Pause" : st.spent > 0 || resumed ? "Resume" : "Start") + '</button><button type="button" class="btn ghost s-prev"' + (st.idx === 0 ? " disabled" : "") + '>Previous</button><button type="button" class="btn ghost s-next">' + (nb ? "Next block" : "Finish") + '</button><button type="button" class="btn ghost s-plus">+1 min</button></div>';
+    drawItems(b);
     drawLesson(b);
     nextC.innerHTML = nb ? '<h2 class="minihead">Up next</h2><p class="sx-name">' + esc(nb.name) + " &middot; " + nb.min + ' min</p><p class="sx-what">' + esc(nb.items[0].task) + "</p>" : '<h2 class="minihead">Last block</h2><p class="sx-what">When this block ends you can log the session.</p>';
     var btWrap = $(".sess-bt", app); if (btWrap) btWrap.hidden = !/^(Play|Rehearse|Record)$/.test(b.name);
@@ -897,7 +936,7 @@ function viewSession(n, day, len) {
     bind();
   }
   function drawDone() {
-    drawLesson({ name: "" });
+    drawLesson({ name: "" }); itemsFor = -1;
     var mins = Math.max(1, Math.round(st.spent / 60));
     now.innerHTML = '<div class="sn-head"><span class="eyebrow">Session complete</span><h2>Nice work</h2></div><p>You practised for ' + mins + " minutes across " + plan.length + " blocks.</p>" +
       '<div class="sn-ctl"><button type="button" class="btn s-log">Log ' + mins + ' minutes</button><a class="btn ghost" href="' + weekHref(n) + '">Back to Week ' + n + "</a>" + (day < 7 ? '<a class="btn ghost" href="#exam-' + n + '">Theory exam</a>' : "") + "</div><p class=\"s-logged sub\" aria-live=\"polite\"></p>";
@@ -917,13 +956,6 @@ function viewSession(n, day, len) {
     $(".s-next", app).addEventListener("click", function () { advance(true); });
     $(".s-prev", app).addEventListener("click", function () { if (st.idx > 0) { st.idx--; st.remain = plan[st.idx].min * 60; st.gap = 0; st.extra = 0; sessionSave(st); draw(); } });
     $(".s-plus", app).addEventListener("click", function () { st.remain += 60; st.extra = (st.extra || 0) + 60; sessionSave(st); draw(); });
-    $$(".sn-items > li[data-seg]", app).forEach(function (li) {
-      li.addEventListener("click", function (e) {
-        if (e.target.closest("a, button")) return;
-        var b = plan[st.idx], sg = segs(b)[+li.getAttribute("data-seg")]; if (!sg) return;
-        st.remain = blockLen(b) - sg.from; st.gap = 0; sessionSave(st); draw();
-      });
-    });
     var g = $(".s-gonow", app); if (g) g.addEventListener("click", function () { st.gap = 0; draw(); });
   }
   function play() { audio(); on = true; last = Date.now(); clearInterval(iv); iv = setInterval(tick, 250); wake(true); draw(); }

@@ -896,3 +896,16 @@ a.t-v { color: var(--accent); font-size: 20px; text-decoration: none; }
 .sn-items > li.seg-cur { border-left-color: var(--accent); background: var(--accent-soft); }
 .sn-items > li.seg-done { opacity: .55; }
 .sn-items > li.seg-done .pi-task { text-decoration: line-through; }
+
+/* session block card: compact clock, full exercise content */
+.sn-top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 4px 18px; }
+.sn-top .sn-head h2 { margin-bottom: 0; }
+.sess-now .sn-clock { font: 700 clamp(44px, 6vw, 64px)/1 var(--f-display); font-variant-numeric: tabular-nums; }
+.sess-now .sn-ring { height: 6px; margin: 8px 0 12px; }
+.sn-items .pi-exhtml { font-size: 15px; line-height: 1.55; color: var(--ink); max-width: none; margin-top: 4px; }
+.sn-items .pi-exhtml p { margin: 4px 0 8px; }
+.sn-items .pi-exhtml pre { margin: 6px 0 10px; }
+.sn-items .pi-boards { margin: 6px 0 4px; gap: 12px 18px; }
+.sn-items .pi-boards .board { margin: 0; }
+.sn-items > li { min-width: 0; }
+.sn-items > li .board-svg, .sn-items > li .tab-scroll { max-width: 100%; }
