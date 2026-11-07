@@ -859,9 +859,10 @@ function viewSession(n, day, len) {
     '<div class="sess-grid"><div class="sess-main"><section class="card sess-now" aria-live="polite"></section><section class="card sess-lesson" hidden></section></div><aside class="sess-side">' +
     '<div class="card sess-next"></div>' +
     (weekTracks(w).length ? '<div class="sess-bt" hidden><h2 class="minihead">' + (w.bt && w.bt.length ? "Backing tracks for this week" : "Backing track for today") + "</h2>" + weekTracks(w).map(bandHTML).join("") + "</div>" : "") +
-    metronomeHTML() + "</aside></div></div></div>";
+    '<div class="sess-float"><div class="card sess-clock" aria-live="off"><div class="sf-block"></div><div class="sf-clock mono">00:00</div><div class="sf-ring"><span></span></div><div class="sf-seg"></div><button type="button" class="btn sf-go">Start</button></div>' +
+    metronomeHTML() + "</div></aside></div></div></div>";
   var app = $("#app"), now = $(".sess-now", app), nextC = $(".sess-next", app), met = mountMetronome($(".met", app));
-  var metEl = $(".sess-side .met", app);
+  var metEl = $(".sess-float", app);
   function centreMet() { if (metEl.isConnected) metEl.style.top = Math.max(16, Math.round((window.innerHeight - metEl.offsetHeight) / 2)) + "px"; }
   window.addEventListener("resize", centreMet); centreMet();
   if (window.ResizeObserver) new ResizeObserver(centreMet).observe(metEl);
@@ -940,8 +941,20 @@ function viewSession(n, day, len) {
       });
     });
   }
+  function drawFloat() {
+    var fc = $(".sess-clock", app); if (!fc) return;
+    if (st.finished) { fc.hidden = true; return; }
+    fc.hidden = false;
+    var b = plan[st.idx], ss = segs(b), k = segIndex(b), el = blockLen(b) - st.remain;
+    $(".sf-block", fc).textContent = b.name + " \u00b7 block " + (st.idx + 1) + " of " + plan.length;
+    $(".sf-clock", fc).textContent = fmt(st.remain);
+    $(".sf-ring span", fc).style.width = (100 * (1 - st.remain / blockLen(b))).toFixed(1) + "%";
+    var sg = ss[k], gap = st.gap > 0;
+    $(".sf-seg", fc).textContent = gap ? "Starting in " + Math.ceil(st.gap) + " s" : ss.length > 1 && sg ? "Now: " + sg.it.task.replace(/^Exercise: /, "") + " (" + fmt(sg.to - el) + " left)" : "";
+    $(".sf-go", fc).textContent = on ? "Pause" : st.spent > 0 || resumed ? "Resume" : "Start";
+  }
   function draw() {
-    if (st.finished) return drawDone();
+    if (st.finished) { drawFloat(); return drawDone(); }
     if (!$(".sn-dyn", now)) { now.innerHTML = '<div class="sn-dyn"></div><div class="sn-static"></div>'; itemsFor = -1; }
     var b = plan[st.idx], nb = plan[st.idx + 1], pct = 100 * (1 - st.remain / blockLen(b));
     var bp = blockBpm(b);
@@ -960,6 +973,7 @@ function viewSession(n, day, len) {
     $(".so-txt", app).textContent = fmt(done) + " of " + fmt(total);
     document.title = (on ? fmt(st.remain) + " " + b.name + " | " : "") + BASE_TITLE;
     st.seg = markSegs(b);
+    drawFloat();
     bind();
   }
   function drawDone() {
@@ -1007,7 +1021,7 @@ function viewSession(n, day, len) {
     if (++saveTick % 8 === 0) sessionSave(st);
     var c = $(".sn-clock", app); if (!c) return;
     if (st.gap > 0 || $(".sn-gap", app)) { draw(); return; }
-    c.textContent = fmt(st.remain);
+    c.textContent = fmt(st.remain); drawFloat();
     var b = plan[st.idx]; $(".sn-ring span", app).style.width = (100 * (1 - st.remain / blockLen(b))).toFixed(1) + "%";
     var sg = markSegs(b);
     if (st.seg !== undefined && sg > st.seg) { pluck(76, 0, 0.22); pluck(83, audio() ? ctx.currentTime + 0.12 : 0, 0.18); }
@@ -1016,6 +1030,7 @@ function viewSession(n, day, len) {
     $(".so-bar span", app).style.width = Math.min(100, 100 * done / total).toFixed(1) + "%"; $(".so-txt", app).textContent = fmt(done) + " of " + fmt(total);
     document.title = fmt(st.remain) + " " + b.name + " | " + BASE_TITLE;
   }
+  $(".sf-go", app).addEventListener("click", function () { if (on) pause(); else play(); });
   $(".s-auto", app).addEventListener("change", function (e) { st.auto = e.target.checked; sessionSave(st); });
   $(".sess-steps", app).addEventListener("click", function (e) {
     var b = e.target.closest("button[data-i]"); if (!b || st.finished) return;
