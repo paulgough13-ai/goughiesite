@@ -493,7 +493,25 @@ function deleteLog(id) {
   if (S.col) queue(function () { return S.col.doc(id).delete(); });
 }
 
-function weekStarted(n) { var w = S.progress[weekKey(n)]; return !!(w && w.k && Object.keys(w.k).some(function (k) { return w.k[k]; })); }
+function weekStarted(n) { var w = S.progress[weekKey(n)]; return !!(w && ((w.k && Object.keys(w.k).some(function (k) { return w.k[k]; })) || (w.days && Object.keys(w.days).length))); }
+/* days of a week marked complete: { "1": "2026-11-07", ..., "7": Sunday } */
+function dayDone(n, d) { var w = S.progress[weekKey(n)]; return !!(w && w.days && w.days[d]); }
+function daysDoneCount(n) { var w = S.progress[weekKey(n)]; return w && w.days ? Object.keys(w.days).length : 0; }
+function setDay(n, d, on) { var p = wk(n); if (!p.days) p.days = {}; if (on) p.days[d] = p.days[d] || todayStr(); else delete p.days[d]; saveProgress(); }
+function daysHTML(n) {
+  return '<div class="days-done"><p class="rate-label">Days completed <span class="dd-count">' + daysDoneCount(n) + ' of 7</span></p><div class="dd-row" role="group" aria-label="Days completed">' +
+    [1, 2, 3, 4, 5, 6, 7].map(function (d) {
+      var on = dayDone(n, d);
+      return '<button type="button" class="dd" data-day="' + d + '" aria-pressed="' + on + '" title="' + (d === 7 ? "Sunday: progress clip" : "Day " + d + " (" + DAY_NAMES[d - 1] + ")") + (on ? ", done " + esc(wk(n).days[d]) : "") + '"><span class="dd-n">' + (d === 7 ? "Sun" : d) + '</span><span class="dd-tick" aria-hidden="true">&#10003;</span></button>';
+    }).join("") + "</div></div>";
+}
+function mountDays(root, n) {
+  root.addEventListener("click", function (e) {
+    var b = e.target.closest(".dd"); if (!b) return;
+    var d = +b.getAttribute("data-day"), on = !dayDone(n, d); setDay(n, d, on);
+    root.innerHTML = daysHTML(n);
+  });
+}
 function weekDone(n) { var w = S.progress[weekKey(n)]; return !!(w && w.done); }
 function currentWeek() { for (var n = 1; n <= 52; n++) if (!weekDone(n)) return n; return 52; }
 
@@ -792,9 +810,16 @@ function mountTimer(root) {
   if (wsel) wsel.value = currentWeek();
   dsel.value = (new Date().getDay() + 6) % 7 + 1;
   function week() { return fixed || +wsel.value; }
+  function labelDays() {
+    $$("option", dsel).forEach(function (o) {
+      var d = +o.value, base = d === 7 ? "Sunday (record)" : "Day " + d + " (" + DAY_NAMES[d - 1] + ")";
+      o.textContent = base + (dayDone(week(), d) ? " \u2713 done" : "");
+    });
+  }
   function build() {
+    labelDays();
     var P = dayPlan(week(), +dsel.value, len), mins = P.blocks.reduce(function (a, b) { return a + b.min; }, 0);
-    $(".t-sub", root).textContent = "Week " + P.week + ", " + (P.day === 7 ? "Sunday" : "Day " + P.day) + ": " + mins + " minutes in " + P.blocks.length + " blocks";
+    $(".t-sub", root).textContent = "Week " + P.week + ", " + (P.day === 7 ? "Sunday" : "Day " + P.day) + ": " + mins + " minutes in " + P.blocks.length + " blocks" + (dayDone(P.week, P.day) ? ". Already done" : "") + ". Days completed this week: " + daysDoneCount(P.week) + " of 7";
     $(".blocks", root).innerHTML = P.blocks.map(function (b) { return '<li><div class="bh"><span>' + esc(b.name) + "</span><span>" + b.min + ' min</span></div><span class="bwhat">' + esc(b.items[0].task) + "</span></li>"; }).join("");
     var href = "#session-" + P.week + "-" + P.day + "-" + len, saved = sessionLoad(), same = saved && saved.key === href.slice(1) && !saved.finished;
     $(".t-open", root).setAttribute("href", href); $(".t-open", root).textContent = same ? "Resume the session" : "Start the session";
@@ -942,6 +967,9 @@ function viewSession(n, day, len) {
     var mins = Math.max(1, Math.round(st.spent / 60));
     now.innerHTML = '<div class="sn-head"><span class="eyebrow">Session complete</span><h2>Nice work</h2></div><p>You practised for ' + mins + " minutes across " + plan.length + " blocks.</p>" +
       '<div class="sn-ctl"><button type="button" class="btn s-log">Log ' + mins + ' minutes</button><a class="btn ghost" href="' + weekHref(n) + '">Back to Week ' + n + "</a>" + (day < 7 ? '<a class="btn ghost" href="#exam-' + n + '">Theory exam</a>' : "") + "</div><p class=\"s-logged sub\" aria-live=\"polite\"></p>";
+    if (!st.dayMarked) { setDay(n, day, true); st.dayMarked = true; sessionSave(st); }
+    now.insertAdjacentHTML("beforeend", '<p class="s-daydone">' + (dayDone(n, day) ? "&#10003; " + (day === 7 ? "Sunday" : "Day " + day) + " of Week " + n + ' is marked complete. <button type="button" class="linkbtn s-dayundo">Undo</button>' : (day === 7 ? "Sunday" : "Day " + day) + ' is not marked complete. <button type="button" class="linkbtn s-dayundo">Mark it complete</button>') + "</p>");
+    $(".s-dayundo", now).addEventListener("click", function () { setDay(n, day, !dayDone(n, day)); drawDone(); });
     nextC.innerHTML = '<h2 class="minihead">Tomorrow</h2><p class="sx-what">' + (day < 6 ? "Day " + (day + 1) + " of Week " + n + "." : day === 6 ? "Sunday: record your progress clip." : "Day 1 of Week " + Math.min(52, n + 1) + ".") + "</p>";
     $$(".sess-steps li", app).forEach(function (li) { li.className = "past"; });
     $(".so-bar span", app).style.width = "100%"; $(".so-txt", app).textContent = "Done";
@@ -1478,7 +1506,7 @@ function viewWeek(n) {
     w.lesson.map(function (s) { return "<section><h2>" + esc(s[0]) + "</h2>" + s[1] + "</section>"; }).join("") +
     examCardHTML(n) + coachHTML(["Give me a fresh variation of this week's main exercise", "I'm finding this week hard. How should I adjust?", "Explain the key idea of this week another way", "What should I listen for when I review my clip?"]) +
     '<details class="about"><summary>About Phase ' + w.phase + "</summary>" + D.intros[w.phase - 1] + "</details></article>" +
-    '<aside class="panel"><div class="card"><h2>This week\'s practice</h2><p class="sub check-count">0 ticked</p><ul class="checklist">' + checks.join("") + "</ul>" +
+    '<aside class="panel"><div class="card"><h2>This week\'s practice</h2><p class="sub check-count">0 ticked</p><ul class="checklist">' + checks.join("") + "</ul>" + '<div class="dd-slot">' + daysHTML(n) + "</div>" +
     '<p class="rate-label">How solid does this week feel?</p><div class="seg small rating" role="group" aria-label="Rate this week">' +
     RATINGS.map(function (r) { return '<button type="button" data-rate="' + r + '" aria-pressed="' + (p.rating === r) + '">' + r + "</button>"; }).join("") + "</div>" +
     '<p class="ex-panel"><a href="#exam">Theory exam</a> <span class="ex-panel-st">' + examBadge(n) + '</span></p>' +
@@ -1511,6 +1539,7 @@ function viewWeek(n) {
     li.appendChild(inp); li.appendChild(lab);
     lab.addEventListener("click", function () { inp.click(); });
   });
+  mountDays($(".dd-slot", app), n);
   var boxes = $$("input[data-check]", app), count = $(".check-count", app), done = $(".week-done", app);
   function refresh() {
     var c = boxes.filter(function (b) { return b.checked; }).length;
@@ -1657,7 +1686,8 @@ function viewLog() {
     '<section class="card"><h2>Last 20 weeks</h2><div class="hm-wrap">' + heatmapSVG(st.days) + '</div><div class="hm-key"><span>Less</span><i class="hm0"></i><i class="hm1"></i><i class="hm2"></i><i class="hm3"></i><i class="hm4"></i><span>More</span></div></section>' +
     '<section class="card"><div class="ch-head"><h2>Clean BPM over time</h2>' + (exList.length ? '<select class="ch-ex" aria-label="Exercise">' + exList.map(function (x) { return '<option value="' + esc(x) + '">' + esc(x) + "</option>"; }).join("") + "</select>" : "") + '</div><div class="ch-slot">' + bpmChartSVG(exList[0] || "") + "</div></section>" +
     '<section class="card"><h2>All entries</h2><div class="all-entries">' + entriesHTML(sortedLogs(), true) + "</div>" +
-    '<div class="exp"><button type="button" class="btn ghost auto x-csv">Export log (CSV)</button><button type="button" class="btn ghost auto x-json">Export everything (JSON)</button></div><div class="x-msg sub" aria-live="polite"></div></section>' +
+    '<div class="exp"><button type="button" class="btn ghost auto x-csv">Export log (CSV)</button><button type="button" class="btn ghost auto x-json">Export everything (JSON)</button><label class="btn ghost auto x-imp">Import a backup<input type="file" accept="application/json,.json" hidden></label></div>' +
+    '<p class="sub x-where">Your progress, log, exam results and quiz stats are saved in this browser on this device. Export a backup now and then; import it here to restore it or move it to another device.</p><div class="x-msg sub" aria-live="polite"></div></section>' +
     '</div><div class="lc-side"><div class="card"><h2>Add an entry</h2>' + logFormHTML(cur, W(cur).ex) + "</div>" +
     coachHTML(["Review my log and tell me what to focus on next week", "Am I practising enough to stay on schedule?", "Which exercise is improving fastest?"], "Coach review", "Claude reads your log and your progress through the program.") + "</div></div></div>";
   var app = $("#app");
@@ -1670,6 +1700,29 @@ function viewLog() {
   });
   $(".x-csv", app).addEventListener("click", function () { saveFile("guitar-practice-log.csv", toCSV(), $(".x-msg", app)); });
   $(".x-json", app).addEventListener("click", function () { saveFile("guitar-program-backup.json", JSON.stringify({ progress: S.progress, logs: S.logs, recordings: S.recs, stats: S.stats }, null, 2), $(".x-msg", app)); });
+  $(".x-imp input", app).addEventListener("change", function (e) {
+    var f = e.target.files && e.target.files[0], msg = $(".x-msg", app); if (!f) return;
+    f.text().then(function (txt) {
+      var b = JSON.parse(txt);
+      if (!b || (!b.progress && !b.logs)) throw new Error("not a backup");
+      if (!window.confirm("Merge this backup into the progress saved on this device? Nothing already here is deleted.")) return;
+      var nP = 0, nL = 0;
+      Object.keys(b.progress || {}).forEach(function (k) {
+        var cur = S.progress[k] || {}, inc = b.progress[k] || {};
+        S.progress[k] = Object.assign({}, inc, cur, { k: Object.assign({}, inc.k || {}, cur.k || {}), days: Object.assign({}, inc.days || {}, cur.days || {}), done: !!(cur.done || inc.done) });
+        if (inc.exam || cur.exam) S.progress[k].exam = (cur.exam && inc.exam) ? (cur.exam.best >= inc.exam.best ? cur.exam : inc.exam) : (cur.exam || inc.exam);
+        nP++;
+      });
+      var have = {}; S.logs.forEach(function (l) { have[l.id] = 1; });
+      (b.logs || []).forEach(function (l) { if (l && l.id && !have[l.id]) { S.logs.push(l); nL++; } });
+      if (b.stats) S.stats = Object.assign({}, b.stats, S.stats);
+      if (b.recordings) S.recs = Object.assign({}, b.recordings, S.recs);
+      saveProgress(); LS.set("gtr52-logs", S.logs); saveStats(); LS.set("gtr52-recs", S.recs);
+      msg.textContent = "Imported " + nP + " weeks of progress and " + nL + " new log entries.";
+      setTimeout(viewLog, 1200);
+    }).catch(function () { msg.textContent = "That file isn't a backup from this site. Use Export everything (JSON) to make one."; });
+    e.target.value = "";
+  });
   mountCoach($(".coach", app), function () {
     var done = []; for (var n = 1; n <= 52; n++) if (weekDone(n)) done.push(n);
     var rated = Object.keys(S.progress).filter(function (k) { return S.progress[k].rating; }).map(function (k) { return "Week " + (+k.slice(1)) + ": " + S.progress[k].rating; });

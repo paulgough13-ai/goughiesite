@@ -927,3 +927,16 @@ a.t-v { color: var(--accent); font-size: 20px; text-decoration: none; }
 .gl-term { font: 700 16px var(--f-display); text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
 .gl-x { position: absolute; top: 6px; right: 8px; background: none; border: 0; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
 .gl-x:hover { color: var(--ink); }
+
+/* days completed */
+.days-done { margin: 12px 0 4px; }
+.dd-count { font: 12px var(--f-mono); color: var(--muted); margin-left: 6px; text-transform: none; letter-spacing: 0; }
+.dd-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.dd { position: relative; height: 40px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--muted); cursor: pointer; font: 600 14px var(--f-display); display: grid; place-items: center; padding: 0; }
+.dd:hover { border-color: var(--accent); color: var(--ink); }
+.dd .dd-tick { display: none; position: absolute; top: 2px; right: 4px; font-size: 10px; }
+.dd[aria-pressed="true"] { background: var(--done); border-color: var(--done); color: #0d1a0f; }
+.dd[aria-pressed="true"] .dd-tick { display: block; }
+.s-daydone { margin-top: 12px; color: var(--done); }
+.x-imp { cursor: pointer; }
+.x-where { margin-top: 10px; }
