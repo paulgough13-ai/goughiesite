@@ -859,7 +859,9 @@ function viewSession(n, day, len) {
       var nm = stg.textContent.replace(/^\s*\d+\.\s*/, "").replace(/\.\s*$/, "").trim();
       if (todayEx[nm]) { el.classList.add("sl-today"); stg.insertAdjacentHTML("afterend", ' <span class="sl-tag">Today</span>'); }
     });
+    attachExamples(box, n);
     mountTabs(box);
+    $$(".sl-body", box).forEach(glossify);
     var bd = $(".sl-boards", box); if (bd) mountBoards(bd, w.boards);
   }
 
@@ -889,7 +891,7 @@ function viewSession(n, day, len) {
   var itemsFor = -1;
   function itemHTML(it, k) {
     var h = (it.secs ? '<span class="pi-time">' + fmtMins(it.secs) + '<span class="pi-left"></span></span>' : "") + '<span class="pi-task">' + esc(it.task) + "</span>";
-    if (it.ex) h += '<div class="pi-exhtml lesson">' + it.ex.html + "</div>";
+    if (it.ex) h += '<div class="pi-exhtml lesson">' + it.ex.html + exampleFor(n, it.ex.name) + "</div>";
     var bi = it.goal ? [] : boardsFor(w, it);
     if (bi.length) h += '<div class="board-grid pi-boards" data-boards="' + bi.join(",") + '">' + boardsHTML(bi.map(function (i) { return w.boards[i]; })) + "</div>";
     if (it.last) h += '<span class="pi-last">Last logged: ' + it.last.bpm + " BPM on " + esc(it.last.date) + "</span>";
@@ -903,7 +905,7 @@ function viewSession(n, day, len) {
     $(".sn-static", now).innerHTML = '<h3 class="minihead">What to do</h3><ul class="tn-items sn-items">' +
       b.items.map(function (it) { return itemHTML(it, it.secs ? k++ : -1); }).join("") + "</ul>" +
       (bp ? '<p class="sn-tip">Metronome set to ' + bp.bpm + " BPM, " + esc(bp.why) + ".</p>" : "");
-    mountTabs($(".sn-static", now));
+    mountTabs($(".sn-static", now)); glossify($(".sn-static", now));
     $$(".pi-boards", now).forEach(function (g) { mountBoards(g, g.getAttribute("data-boards").split(",").map(function (i) { return w.boards[+i]; })); });
     $$(".sn-items > li[data-seg]", now).forEach(function (li) {
       li.addEventListener("click", function (e) {
@@ -1490,7 +1492,9 @@ function viewWeek(n) {
     "</div></nav>";
   var app = $("#app"); app.innerHTML = html;
   mountBoards($(".boards", app), w.boards);
+  attachExamples($(".lesson", app), n);
   mountTabs($(".lesson", app));
+  $$(".lesson > section", app).forEach(glossify);
   $$(".band", app).forEach(mountBand);
   $$(".drone", app).forEach(mountDrone);
   var met = mountMetronome($(".met", app));
@@ -2782,6 +2786,199 @@ function viewExam(n) {
   $("#app").innerHTML = '<div class="wrap pagehead"><div class="eyebrow"><a href="#exams">Theory exams</a></div><h1>Week ' + n + ": " + esc(W(n).title) + '</h1><p class="lede"><a href="' + weekHref(n) + '">Open the week\'s lesson</a></p></div><div class="wrap narrowish">' + examCardHTML(n) + "</div>";
   mountExam($(".exam", $("#app")));
 }
+
+/* ===== worked examples and answer keys for exercises with definite answers ===== */
+function exTable(head, rows) {
+  return '<div class="tbl"><table><thead><tr>' + head.map(function (h) { return "<th>" + esc(h) + "</th>"; }).join("") + "</tr></thead><tbody>" +
+    rows.map(function (r) { return "<tr>" + r.map(function (c) { return "<td>" + esc(c) + "</td>"; }).join("") + "</tr>"; }).join("") + "</tbody></table></div>";
+}
+function exBox(example, answers) {
+  return '<div class="ex-example"><div class="exx-label">Worked example</div>' + example +
+    (answers ? '<details class="exx-answers"><summary>Show the answers</summary>' + answers + "</details>" : "") + "</div>";
+}
+var EXAMPLES = {
+  "4|Spell the triads": function () {
+    var roots = ["C", "G", "D", "A", "E", "F"];
+    return exBox("<p><b>C major.</b> Write out the C major scale and number it: C(1) D(2) <b>E(3)</b> F(4) <b>G(5)</b> A(6) B(7). The triad is the 1st, 3rd and 5th notes: <b>C E G</b>.</p>" +
+      "<p><b>C minor.</b> Lower the 3rd by one semitone (one fret): E becomes Eb, so C minor is <b>C Eb G</b>.</p>" +
+      "<p><b>On the guitar.</b> In the open C chord: A string fret 3 is C (1), D string fret 2 is E (3), G string open is G (5), B string fret 1 is C (1) again, and the open high e is E (3).</p>",
+      exTable(["Root", "Major (1 3 5)", "Minor (1 b3 5)"], roots.map(function (r) { return [r, spellSet(r, "1 3 5").join(" "), spellSet(r, "1 b3 5").join(" ")]; })));
+  },
+  "5|Capo work": function () {
+    return exBox("<p>A capo raises every chord shape by one semitone per fret. With the capo on fret 2, the G shape becomes G + 2 semitones = <b>A</b>. Work out each chord the same way: count up from the shape's root.</p>",
+      exTable(["Shape", "Capo 2 sounds", "Capo 4 sounds"], [["G", "A", "B"], ["D", "E", "F#"], ["Em", "F#m", "G#m"], ["C", "D", "E"]]));
+  },
+  "7|Chord chart from memory": function () {
+    var g = spellSet("G", SCALE_F.major), q = ["", "m", "m", "", "", "m", "°"];
+    return exBox("<p>Write the major scale, then put the same pattern of qualities on it every time: <b>major, minor, minor, major, major, minor, diminished</b>.</p>" +
+      "<p><b>Key of G:</b> the scale is " + g.join(" ") + ", so the chords are <b>" + g.map(function (x, i) { return x + q[i]; }).join(", ") + "</b>.</p>", null);
+  },
+  "7|Circle of fifths drill": function () {
+    return exBox("<p>Start at C (no sharps or flats) and go up a perfect 5th each step; each step clockwise adds one sharp. Going anticlockwise from C (down a 5th, or up a 4th) adds one flat each step.</p>",
+      exTable(["Clockwise", "Sharps", "Anticlockwise", "Flats"], [["C", "0", "C", "0"], ["G", "1", "F", "1"], ["D", "2", "Bb", "2"], ["A", "3", "Eb", "3"], ["E", "4", "Ab", "4"], ["B", "5", "Db", "5"], ["F#", "6", "Gb", "6"]]) +
+      "<p>Root notes for the first few: G on the low E string fret 3, D on the A string fret 5, A on the low E fret 5, E on the A string fret 7.</p>");
+  },
+  "9|Move to the middle strings": function () {
+    return exBox("<p>C major is C E G. Put one note on each of the D, G and B strings, keeping them close together. Remember the B string is tuned a major 3rd above G, so shapes shift up one fret there.</p>",
+      exTable(["Inversion", "Lowest to highest", "Frets (D, G, B)"], [["Root position", "C E G", "10, 9, 8"], ["1st inversion", "E G C", "2, 0, 1 (or 14, 12, 13)"], ["2nd inversion", "G C E", "5, 5, 5"]]));
+  },
+  "10|Shell shapes": function () {
+    return exBox("<p>The chord takes its name from the root under your lowest finger. Move the Gmaj7 shell (root on the low E string, fret 3) up two frets and the root becomes A, so it is now <b>Amaj7</b>. Move the C7 shell (root on the A string, fret 3) to fret 5 and it becomes <b>D7</b>.</p>", null);
+  },
+  "11|Find the root": function () {
+    return exBox("<p>Every C on the neck is the same pitch class, so look for the frets where the open string plus the fret count lands on C.</p>",
+      exTable(["Shape", "Around frets", "C notes"], [["C shape", "0 to 3", "A string fret 3, B string fret 1"], ["A shape", "3 to 5", "A string fret 3, G string fret 5"], ["G shape", "5 to 8", "low E fret 8, G string fret 5, high e fret 8"], ["E shape", "8 to 10", "low E fret 8, D string fret 10, high e fret 8"], ["D shape", "10 to 13", "D string fret 10, B string fret 13"]]));
+  },
+  "11|Move to G and D": function () {
+    return exBox("<p>The shapes always follow the order C, A, G, E, D up the neck. Find where the first one sits for your chord, then the rest follow in order.</p>",
+      exTable(["Chord", "Shapes up the neck"], [["G", "E shape at fret 3, D shape at fret 5, C shape at fret 7, A shape at fret 10, G shape at fret 12 (or open)"], ["D", "D shape open, C shape at fret 2, A shape at fret 5, G shape at fret 7, E shape at fret 10"]]));
+  },
+  "19|Name the parent": function () {
+    var qs = [["C", "mixolydian"], ["E", "phrygian"], ["D", "lydian"], ["A", "dorian"], ["B", "locrian"], ["F#", "aeolian"], ["G", "dorian"], ["F", "lydian"], ["D", "mixolydian"], ["C#", "phrygian"]];
+    var rows = qs.map(function (x) {
+      var idx = MODES7.indexOf(x[1]), ppc = ((nParse(x[0]).pc - [0, 2, 4, 5, 7, 9, 11][idx]) % 12 + 12) % 12;
+      return [x[0] + " " + SCALE_N[x[1]], ORD[idx + 1] + " mode", MAJOR_KEYS.filter(function (k) { return nParse(k).pc === ppc; })[0] + " major"];
+    });
+    return exBox("<p><b>D Dorian.</b> Dorian is the 2nd mode, so D is the 2nd note of the parent scale. Which major scale has D as its 2nd note? <b>C major</b> (C D E F G A B). So D Dorian uses the notes of C major.</p>",
+      exTable(["Mode", "Which mode", "Parent major"], rows));
+  },
+  "40|Harmonise a riff": function () {
+    var c = spellSet("C", SCALE_F.major);
+    return exBox("<p>Take each melody note and count up three scale notes (skip one). In C major, a melody of <b>C D E F G</b> gets thirds of <b>E F G A B</b> above it.</p>",
+      exTable(["Melody note", "Diatonic 3rd above"], c.map(function (x, i) { return [x, c[(i + 2) % 7]]; })));
+  },
+  "41|Maj7 to 7": function () {
+    return exBox("<p>Cmaj7 is <b>C E G B</b>. Lower the 7th (B) by one fret to Bb and you get C7: <b>C E G Bb</b>. Only that one note changes in every inversion.</p>", null);
+  }
+};
+function exampleFor(n, exName) { var f = EXAMPLES[n + "|" + exName]; return f ? f() : ""; }
+/* add examples into a rendered lesson section, right after each exercise's own content */
+function attachExamples(root, n) {
+  $$("p, li", root).forEach(function (el) {
+    var st = el.querySelector("strong"); if (!st || el.closest(".ex-example")) return;
+    var nm = st.textContent.replace(/^\s*\d+\.\s*/, "").replace(/\.\s*$/, "").trim(), html = exampleFor(n, nm); if (!html) return;
+    var after = el; while (after.nextElementSibling && !after.nextElementSibling.querySelector("strong") && !after.nextElementSibling.classList.contains("ex-example")) after = after.nextElementSibling;
+    after.insertAdjacentHTML("afterend", html);
+  });
+}
+
+/* ===== glossary: tap a key word for a short definition ===== */
+var GLOSSARY = [
+  ["triad", "triads?", "A three-note chord built from a root, a 3rd and a 5th. C major is C E G; C minor lowers the 3rd to make C Eb G."],
+  ["inversion", "inversions?", "A chord with a note other than the root at the bottom. 1st inversion has the 3rd lowest (C major as E G C); 2nd inversion has the 5th lowest (G C E)."],
+  ["interval", "intervals?", "The distance between two notes, named by letter count and quality: C to E is a major 3rd (4 semitones), C to G a perfect 5th (7 semitones)."],
+  ["semitone", "semitones?|half steps?", "The smallest step in Western music: one fret on the guitar. Two semitones make a whole step (tone)."],
+  ["whole step", "whole steps?|whole tones?", "Two semitones, or two frets on one string. The major scale is built from whole (W) and half (H) steps: W W H W W W H."],
+  ["scale degree", "scale degrees?|degrees?", "A note's number within a scale. In C major, C is 1, D is 2, E is 3 and so on. Chord formulas like 1 3 5 use these numbers."],
+  ["root", "roots?", "The note a chord or scale is named after and built from. The root of G major is G."],
+  ["diatonic", "diatonic", "Belonging to the key. The diatonic chords of C major use only the notes C D E F G A B: C, Dm, Em, F, G, Am, B diminished."],
+  ["relative minor", "relative minors?", "The minor key that shares a major key's notes. It starts on the 6th degree: A minor is the relative minor of C major."],
+  ["circle of fifths", "circle of fifths", "All twelve keys arranged a perfect 5th apart. Clockwise from C each key adds a sharp (G, D, A...); anticlockwise each adds a flat (F, Bb, Eb...)."],
+  ["key signature", "key signatures?", "The set of sharps or flats a key uses. G major has one sharp (F#); F major has one flat (Bb)."],
+  ["power chord", "power chords?", "Just the root and 5th (sometimes the octave too), written like G5. With no 3rd it is neither major nor minor."],
+  ["slash chord", "slash chords?", "A chord with a named bass note: D/F# means a D chord with F# as the lowest note."],
+  ["barre chord", "barre chords?|barre", "A chord where one finger presses several strings across a fret, acting like a movable capo. E shape barres take their root from the low E string, A shape barres from the A string."],
+  ["capo", "capos?", "A clamp across the strings that raises every open chord shape by one semitone per fret. A G shape with a capo on fret 2 sounds as A."],
+  ["CAGED", "CAGED", "Five open chord shapes, C A G E D, that link together up the neck so you can play any chord in five places."],
+  ["chord tone", "chord tones?", "A note that belongs to the chord being played: its root, 3rd, 5th (and 7th). Landing on these makes a solo follow the chords."],
+  ["seventh chord", "7th chords?|seventh chords?", "A triad plus a 7th: major 7 (1 3 5 7), dominant 7 (1 3 5 b7), minor 7 (1 b3 5 b7) and minor 7 flat 5 (1 b3 b5 b7)."],
+  ["dominant 7", "dominant 7(?:th)?s?|dominant seventh", "A major triad with a flat 7th (1 3 5 b7), such as G7 = G B D F. It is the V chord and pulls strongly back to the I chord."],
+  ["shell voicing", "shells?|shell voicings?|shell shapes?", "A three-note chord with just the root, 3rd and 7th: the notes that define the chord's quality, without the 5th."],
+  ["arpeggio", "arpeggios?", "The notes of a chord played one at a time instead of together."],
+  ["pentatonic", "pentatonic", "A five-note scale. A minor pentatonic is A C D E G (1 b3 4 5 b7); C major pentatonic has the same notes starting on C."],
+  ["blues scale", "blues scales?", "The minor pentatonic plus the flat 5th: A blues is A C D Eb E G. The added note is the 'blue note'."],
+  ["mode", "modes?", "A scale made by starting a parent scale on a different note. D Dorian uses the notes of C major but treats D as home."],
+  ["character note", "character notes?", "The one note that makes a mode sound different from plain major or minor: the #4 of Lydian, the natural 6 of Dorian, the b2 of Phrygian, the b7 of Mixolydian."],
+  ["vamp", "vamps?", "A short chord loop that repeats, often just one or two chords, used for practising a scale or mode over."],
+  ["harmonic minor", "harmonic minor", "Natural minor with a raised 7th: A harmonic minor is A B C D E F G#. The raised 7th makes the V chord a dominant 7 (E7 in A minor)."],
+  ["melodic minor", "melodic minor", "In jazz, a major scale with a flat 3rd: A melodic minor is A B C D E F# G#. Its modes include Lydian dominant and the altered scale."],
+  ["drop 2", "drop 2", "A four-note voicing made by taking a close chord and dropping the second note from the top down an octave, so it fits on four adjacent strings."],
+  ["drop 3", "drop 3", "A four-note voicing made by dropping the third note from the top down an octave, which spreads the chord across a skipped string."],
+  ["voicing", "voicings?", "The particular way a chord's notes are arranged: which note is lowest, how they are spread, and on which strings."],
+  ["voice leading", "voice leading", "Moving each note of one chord to the nearest note of the next, so the chords connect smoothly."],
+  ["turnaround", "turnarounds?", "A short chord sequence at the end of a section that leads back to the start, usually the last two bars of a blues."],
+  ["12 bar blues", "12 bar blues", "A 12-bar form using the I, IV and V chords: four bars of I, two of IV, two of I, then V, IV, I and a turnaround."],
+  ["ii V I", "ii V I", "The most common jazz progression: the chords on the 2nd, 5th and 1st degrees. In C: Dm7, G7, Cmaj7."],
+  ["modal interchange", "modal interchange|borrowed chords?", "Borrowing chords from the parallel key or mode, such as Fm (iv from C minor) used in C major."],
+  ["contrafact", "contrafacts?", "A new melody written over the chord changes of an existing song."],
+  ["legato", "legato", "Smooth, connected playing where most notes come from hammer-ons, pull-offs and slides rather than picking."],
+  ["hammer-on", "hammer-ons?", "Sounding a higher note on the same string by fretting it firmly, without picking."],
+  ["pull-off", "pull-offs?", "Sounding a lower note on the same string by flicking the fretting finger off the string."],
+  ["vibrato", "vibrato", "A regular wobble in pitch, made by bending the string slightly back and forth, to give a held note life."],
+  ["double stop", "double stops?", "Two notes played together, often a 3rd or 6th apart."],
+  ["alternate picking", "alternate picking", "Strictly alternating down and up strokes, whatever the string changes."],
+  ["economy picking", "economy picking", "Picking that keeps moving in the same direction when changing strings, to save motion."],
+  ["sweep picking", "sweep picking|sweeps?", "One continuous pick stroke across several strings, one note per string, often used for arpeggios."],
+  ["hybrid picking", "hybrid picking", "Using the pick together with the free middle and ring fingers."],
+  ["tapping", "tapping", "Hammering notes onto the fretboard with a picking-hand finger, then pulling off to notes held by the fretting hand."],
+  ["harmonics", "harmonics?", "Bell-like notes made by lightly touching a string over a fret (5, 7 or 12) without pressing it down."],
+  ["drop D", "drop D", "A tuning with the low E string lowered a whole step to D."],
+  ["syncopation", "syncopat(?:ion|ed)", "Accenting the off-beats, the spaces between the main beats, which gives rhythm a push."],
+  ["triplet", "triplets?", "Three notes evenly spaced in the time normally taken by two."],
+  ["comping", "comping|comp", "Accompanying with chords, usually with a rhythmic, conversational feel behind a soloist."],
+  ["transcription", "transcri(?:be|bing|ption)", "Working out music by ear and writing it down or learning it from the recording."],
+  ["BPM", "BPM", "Beats per minute: the tempo. At 60 BPM there is one beat each second."],
+  ["octave", "octaves?", "The same note at double (or half) the pitch, 12 semitones apart. Fret 12 is the open string an octave up."],
+  ["chromatic", "chromatic", "Moving in semitones, using every fret in turn."],
+  ["tab", "tab", "Guitar notation with six lines for the six strings (low E at the bottom) and numbers showing which fret to play."]
+];
+var GLOSS_RE = null;
+function glossRegex() {
+  if (!GLOSS_RE) GLOSS_RE = new RegExp("\\b(" + GLOSSARY.map(function (g) { return g[1]; }).sort(function (a, b) { return b.length - a.length; }).join("|") + ")\\b", "i");
+  return GLOSS_RE;
+}
+function glossFind(word) {
+  for (var i = 0; i < GLOSSARY.length; i++) if (new RegExp("^(?:" + GLOSSARY[i][1] + ")$", "i").test(word)) return i;
+  return -1;
+}
+/* underline the first use of each glossary term inside root */
+function glossify(root) {
+  var seen = {}, re = glossRegex(), skip = "PRE,CODE,A,BUTTON,SUMMARY,H1,H2,H3,H4,TH,SELECT,OPTION,LABEL,TEXTAREA,SCRIPT,STYLE,svg";
+  var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: function (t) {
+      for (var p = t.parentNode; p && p !== root; p = p.parentNode) {
+        if (skip.indexOf(p.nodeName) > -1 || (p.classList && (p.classList.contains("gl") || p.classList.contains("tab-bar") || p.classList.contains("board") || p.classList.contains("exx-label")))) return NodeFilter.FILTER_REJECT;
+      }
+      return re.test(t.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+    }
+  });
+  var nodes = []; while (walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach(function (t) {
+    var text = t.nodeValue, frag = document.createDocumentFragment(), last = 0, m, rx = new RegExp(re.source, "gi"), changed = false;
+    while ((m = rx.exec(text))) {
+      var gi = glossFind(m[1]); if (gi < 0 || seen[gi]) continue;
+      seen[gi] = 1; changed = true;
+      frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+      var b = document.createElement("button"); b.type = "button"; b.className = "gl"; b.setAttribute("data-gl", gi); b.setAttribute("aria-haspopup", "dialog"); b.textContent = m[1];
+      frag.appendChild(b); last = m.index + m[1].length;
+    }
+    if (!changed) return;
+    frag.appendChild(document.createTextNode(text.slice(last)));
+    t.parentNode.replaceChild(frag, t);
+  });
+}
+var glossPop = null;
+function glossClose() { if (glossPop) { glossPop.remove(); glossPop = null; } }
+function glossOpen(btn) {
+  glossClose();
+  var g = GLOSSARY[+btn.getAttribute("data-gl")]; if (!g) return;
+  var pop = document.createElement("div"); pop.className = "gl-pop"; pop.setAttribute("role", "dialog"); pop.setAttribute("aria-label", g[0]);
+  pop.innerHTML = '<div class="gl-term">' + esc(g[0]) + '</div><p>' + esc(g[2]) + '</p><button type="button" class="gl-x" aria-label="Close">&times;</button>';
+  document.body.appendChild(pop); glossPop = pop;
+  var r = btn.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight, vw = document.documentElement.clientWidth;
+  var left = Math.max(12, Math.min(vw - pw - 12, r.left + r.width / 2 - pw / 2)), top = r.bottom + 8;
+  if (top + ph > window.innerHeight - 8 && r.top - ph - 8 > 8) top = r.top - ph - 8;
+  pop.style.left = left + window.scrollX + "px"; pop.style.top = top + window.scrollY + "px";
+  $(".gl-x", pop).addEventListener("click", glossClose);
+  $(".gl-x", pop).focus();
+}
+document.addEventListener("click", function (e) {
+  var b = e.target.closest && e.target.closest(".gl");
+  if (b) { e.preventDefault(); e.stopPropagation(); if (glossPop && glossPop.getAttribute("aria-label") === GLOSSARY[+b.getAttribute("data-gl")][0]) glossClose(); else glossOpen(b); return; }
+  if (glossPop && !e.target.closest(".gl-pop")) glossClose();
+}, true);
+document.addEventListener("keydown", function (e) { if (e.key === "Escape") glossClose(); });
+window.addEventListener("hashchange", glossClose);
 
 /* ===== fretboard quiz ===== */
 var SNAME = ["", "e", "B", "G", "D", "A", "E"];

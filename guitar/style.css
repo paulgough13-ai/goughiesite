@@ -909,3 +909,21 @@ a.t-v { color: var(--accent); font-size: 20px; text-decoration: none; }
 .sn-items .pi-boards .board { margin: 0; }
 .sn-items > li { min-width: 0; }
 .sn-items > li .board-svg, .sn-items > li .tab-scroll { max-width: 100%; }
+
+/* worked examples */
+.ex-example { margin: 10px 0 14px; padding: 10px 14px; border-radius: 6px; background: color-mix(in srgb, var(--accent) 8%, var(--surface)); border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.exx-label { font: 600 12px var(--f-display); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+.ex-example p { margin: 4px 0 8px; }
+.exx-answers > summary { cursor: pointer; font: 600 14px var(--f-display); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); padding: 4px 0; }
+.ex-example .tbl { margin: 6px 0; }
+.ex-example table { font-size: 14px; }
+.ex-example th, .ex-example td { padding: 4px 10px 4px 0; text-align: left; vertical-align: top; }
+
+/* glossary terms and popup */
+.gl { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: help; text-decoration: underline dotted var(--accent); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.gl:hover, .gl:focus-visible { color: var(--accent); }
+.gl-pop { position: absolute; z-index: 50; width: min(320px, calc(100vw - 24px)); padding: 12px 34px 12px 14px; border-radius: 8px; background: var(--surface); border: 1px solid var(--accent); box-shadow: 0 12px 32px rgba(0, 0, 0, .55); color: var(--ink); font: 15px/1.5 var(--f-body); }
+.gl-pop p { margin: 4px 0 0; }
+.gl-term { font: 700 16px var(--f-display); text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
+.gl-x { position: absolute; top: 6px; right: 8px; background: none; border: 0; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
+.gl-x:hover { color: var(--ink); }
